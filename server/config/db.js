@@ -15,10 +15,7 @@ const connectDB = async () => {
             console.error("MongoDB connection error:", err);
         });
 
-        await mongoose.connect(mongoUrl, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        await mongoose.connect(mongoUrl);
     } catch (error) {
         console.error("Failed to connect to MongoDB:", error);
         process.exit(1);
