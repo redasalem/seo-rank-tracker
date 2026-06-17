@@ -1,4 +1,5 @@
 import KeywordTracking from "../models/keywordTraking.js";
+import { processSingleKeyword } from "../services/keywordTrakingService.js";
 
 // Add a new keyword for tracking
 export const addKeyword = async (req, res) => {
@@ -35,19 +36,33 @@ export const addKeyword = async (req, res) => {
         }
 
         // Create new tracking entry
-        const newTracking = await KeywordTracking.create({
+        const newEntry = await KeywordTracking.create({
             userId,
             keyword,
             url,
-            country,
             domain,
+            country,
             status: "pending"
         });
 
-        res.status(201).json({
-            message: "Keyword tracking added successfully",
-            tracking: newTracking
-        });
+        // 🔥 Wait for actual processing to finish before responding
+        try {
+            await processSingleKeyword(newEntry._id);
+            // Fetch the updated entry to return it
+            const updatedEntry = await KeywordTracking.findById(newEntry._id);
+            res.status(201).json({
+                message: "Keyword added and analyzed successfully",
+                tracking: updatedEntry
+            });
+        } catch (err) {
+            console.error(`⚠️ Keyword scan failed for: ${keyword}`, err);
+            // Still return success for adding, but indicate analysis failed
+            const failedEntry = await KeywordTracking.findById(newEntry._id);
+            res.status(201).json({
+                message: "Keyword added, but analysis failed. Try refreshing later.",
+                tracking: failedEntry
+            });
+        }
 
     } catch (error) {
         console.error("Error adding keyword:", error);
@@ -106,21 +121,25 @@ export const refreshKeyword = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id;
 
-        const keyword = await KeywordTracking.findOne({ _id: id, userId });
+        const entry = await KeywordTracking.findOne({ _id: id, userId });
 
-        if (!keyword) {
+        if (!entry) {
             return res.status(404).json({ message: "Keyword tracking not found" });
         }
 
-        // Set status to pending to trigger the background scraping job
-        keyword.status = "pending";
-        await keyword.save();
+        // تغيير الحالة فوراً حتى يعرف الفرونت أن التحديث جاري
+        entry.status = "pending";
+        await entry.save();
 
-        res.status(200).json({ 
-            message: "Keyword refresh initiated. The ranking will be updated shortly.",
-            keyword 
-        });
-
+        // 🔥 Wait for actual processing to finish before responding
+        try {
+            await processSingleKeyword(entry._id);
+            res.status(200).json({ message: "Keyword refreshed successfully" });
+        } catch (err) {
+            console.error(`⚠️ Keyword refresh failed for: ${entry.keyword}`, err);
+            res.status(500).json({ message: "Keyword refresh failed" });
+        }
+        
     } catch (error) {
         console.error("Error refreshing keyword:", error);
         res.status(500).json({ message: "Server error", error: error.message });

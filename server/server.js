@@ -4,6 +4,9 @@ import "dotenv/config";
 import connectDB from "./config/db.js";
 import authRouter from "./routes/authRoutes.js";
 import rankRouter from "./routes/rankRoutes.js";
+import analysisRouter from "./routes/analysisRoutes.js";
+import cronRouter from "./routes/cronRoutes.js";
+import { startCronJobs } from "./jobs/scheduler.js";
 await connectDB();
 
 //init app
@@ -23,11 +26,18 @@ app.get("/",(req,res)=>{
 
 app.use("/api/auth",authRouter);
 app.use("/api/rank", rankRouter);
+app.use("/api/analysis", analysisRouter);
+app.use("/api/cron", cronRouter);
 
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT,()=>{
-console.log(`Server Is running on port ${PORT}`);
-})
+app.listen(PORT, () => {
+    console.log(`Server Is running on port ${PORT}`);
+    
+    // Disable node-cron if running on Vercel (Vercel uses its own cron via /api/cron)
+    if (!process.env.VERCEL) {
+        startCronJobs();
+    }
+});
 
