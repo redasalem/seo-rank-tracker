@@ -3,7 +3,7 @@ import cors from "cors";
 import "dotenv/config";
 import connectDB from "./config/db.js";
 import authRouter from "./routes/authRoutes.js";
-
+import rankRouter from "./routes/rankRoutes.js";
 await connectDB();
 
 //init app
@@ -21,7 +21,8 @@ app.get("/",(req,res)=>{
 
 //auth endpoint
 
-app.use("/api/auth",authRouter)
+app.use("/api/auth",authRouter);
+app.use("/api/rank", rankRouter);
 
 
 const PORT = process.env.PORT || 5000;

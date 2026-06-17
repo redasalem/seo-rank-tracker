@@ -9,21 +9,15 @@ const auth = (req,res,next)=>{
 
         if (authHeader && authHeader.startsWith("Bearer")) {
             token = authHeader.split(" ")[1];
-        }
-        else if (req.cookies && req.cookies.token) {
+        } else if (req.cookies && req.cookies.token) {
             token = req.cookies.token;
-        }
-        else{
-            res.status(401).json({ message: "Not authorized, no token found" });
+        } else {
+            return res.status(401).json({ message: "Not authorized, no token found" });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        req.userId = decoded.id
-
-        if (!req.user) {
-            return res.status(404).json({ message: "User not found with this token" });
-        }
+        req.user = { id: decoded.id };
 
         next();
 
