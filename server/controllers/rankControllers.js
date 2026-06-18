@@ -4,7 +4,7 @@ import { processSingleKeyword } from "../services/keywordTrakingService.js";
 // Add a new keyword for tracking
 export const addKeyword = async (req, res) => {
     try {
-        const { keyword, url, country, domain } = req.body;
+        let { keyword, url, country, domain } = req.body;
         const userId = req.user.id;
 
         // Validation
