@@ -1,6 +1,6 @@
 import cron from "node-cron";
-import KeywordTracking from "../models/keywordTraking.js";
-import { processAllPendingKeywords } from "../services/keywordTrakingService.js";
+import KeywordTracking from "../models/keywordTracking.js";
+import { processAllPendingKeywords } from "../services/keywordTrackingService.js";
 
 // ─── تحديث يومي لجميع الكلمات المفتاحية ──────────────────────────────────
 // يعمل كل يوم الساعة 3 الفجر (وقت قليل الضغط على السيرفر)

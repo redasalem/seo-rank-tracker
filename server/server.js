@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import "dotenv/config";
 import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
@@ -31,6 +32,9 @@ app.use(cors({
     credentials: true
 }));
 
+// Security Headers
+app.use(helmet());
+
 // Global Rate Limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
@@ -40,8 +44,22 @@ const limiter = rateLimit({
     legacyHeaders: false,
 });
 
+// Strict Auth Rate Limiting (prevents brute force on login/register)
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 10, // Max 10 attempts per window
+    message: { message: "Too many authentication attempts, please try again after 15 minutes" },
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+});
+
 // Apply rate limiting to all API requests
 app.use("/api", limiter);
+
+// Apply stricter rate limiting to auth endpoints
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
 
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
 import { stripeWebhook } from "./controllers/subscriptionControllers.js";

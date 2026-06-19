@@ -1,5 +1,5 @@
-import KeywordTracking from "../models/keywordTraking.js";
-import { createBrowser, closeBrowser, scrapeGoogle } from "./rankTrakerService.js";
+import KeywordTracking from "../models/keywordTracking.js";
+import { createBrowser, closeBrowser, scrapeGoogle } from "./rankTrackerService.js";
 import { createNotification } from "./notificationService.js";
 
 // ─── تحليل النتائج: إيجاد موقع المستخدم + المنافسين ──────────────────────

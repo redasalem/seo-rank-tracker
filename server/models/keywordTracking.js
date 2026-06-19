@@ -15,7 +15,7 @@ const competitorSchema = new mongoose.Schema({
     snippet: String
 }, { _id: false });
 
-const keywordTrakingSchema = new mongoose.Schema({
+const keywordTrackingSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     keyword: { type: String, required: true, trim: true, lowercase: true },
     url: { type: String, required: true, trim: true },
@@ -31,8 +31,8 @@ const keywordTrakingSchema = new mongoose.Schema({
     status: { type: String, enum: ["success", "failed", "pending"], default: "pending" }
 }, { timestamps: true });
 
-keywordTrakingSchema.index({ userId: 1, keyword: 1, domain: 1 }, { unique: true });
+keywordTrackingSchema.index({ userId: 1, keyword: 1, domain: 1 }, { unique: true });
 
-const KeywordTracking = mongoose.model("KeywordTracking", keywordTrakingSchema);
+const KeywordTracking = mongoose.model("KeywordTracking", keywordTrackingSchema);
 
 export default KeywordTracking;

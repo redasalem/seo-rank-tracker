@@ -1,6 +1,6 @@
-import KeywordTracking from "../models/keywordTraking.js";
+import KeywordTracking from "../models/keywordTracking.js";
 import User from "../models/User.js";
-import { processSingleKeyword } from "../services/keywordTrakingService.js";
+import { processSingleKeyword } from "../services/keywordTrackingService.js";
 
 // Add a new keyword for tracking
 export const addKeyword = async (req, res) => {

@@ -1,6 +1,6 @@
 import express from "express";
-import KeywordTracking from "../models/keywordTraking.js";
-import { processAllPendingKeywords } from "../services/keywordTrakingService.js";
+import KeywordTracking from "../models/keywordTracking.js";
+import { processAllPendingKeywords } from "../services/keywordTrackingService.js";
 
 const cronRouter = express.Router();
 
