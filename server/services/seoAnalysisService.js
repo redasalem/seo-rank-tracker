@@ -282,7 +282,10 @@ export async function runFullSEOAnalysis(analysisId) {
     let session, browser, page;
 
     try {
-        const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
+        const bb = new Browserbase({ 
+            apiKey: process.env.BROWSERBASE_API_KEY,
+            projectId: process.env.BROWSERBASE_PROJECT_ID
+        });
         session = await bb.sessions.create();
         browser = await chromium.connectOverCDP(session.connectUrl);
         const context = browser.contexts()[0];
