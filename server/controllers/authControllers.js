@@ -23,50 +23,17 @@ export const register = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Generate verification token
-        const verificationToken = crypto.randomBytes(32).toString("hex");
-
-        // Create new user
+        // Create new user (auto-verified, no email confirmation needed)
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
-            emailVerificationToken: verificationToken,
-            isEmailVerified: false
+            isEmailVerified: true
         });
 
-        // Prepare verification link
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const verifyUrl = `${frontendUrl}/verify-email/${verificationToken}`;
-
-        // Send Email
-        const emailContent = {
-            to: user.email,
-            subject: "Verify Your Email - Rank Pilot",
-            text: `Welcome to Rank Pilot! Please click on the link below to verify your email address:\n\n${verifyUrl}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                    <h2 style="color: #1f2937;">Verify Your Email</h2>
-                    <p style="color: #4b5563;">Hi ${user.name}, welcome to Rank Pilot! Please click the button below to verify your email and activate your account:</p>
-                    <div style="margin: 30px 0; text-align: center;">
-                        <a href="${verifyUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Verify Email</a>
-                    </div>
-                    <p style="color: #6b7280; font-size: 14px;">If the button above doesn't work, copy and paste this URL into your browser:</p>
-                    <p style="color: #2563eb; font-size: 14px; word-break: break-all;">${verifyUrl}</p>
-                </div>
-            `
-        };
-
-        const mailResult = await sendEmail(emailContent);
-
-        const responseData = {
-            message: "User registered successfully. Please check your email to verify your account."
-        };
-        if (process.env.NODE_ENV !== "production" || mailResult.loggedToConsole) {
-            responseData.verifyUrl = verifyUrl; // helps frontend/developer test locally
-        }
-
-        res.status(201).json(responseData);
+        res.status(201).json({
+            message: "User registered successfully. You can now login."
+        });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
@@ -94,15 +61,10 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: "Invalid email or password" });
         }
 
-        // Check if email is verified
+        // Auto-verify legacy unverified users
         if (!user.isEmailVerified) {
-            // Legacy user fallback: if no verification token exists, mark as verified
-            if (!user.emailVerificationToken) {
-                user.isEmailVerified = true;
-                await user.save();
-            } else {
-                return res.status(403).json({ message: "Please verify your email address to login" });
-            }
+            user.isEmailVerified = true;
+            await user.save();
         }
 
         // Generate Access Token (short lived)
