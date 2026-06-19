@@ -279,10 +279,10 @@ export async function runFullSEOAnalysis(analysisId) {
 
     console.log(`🚀 Starting SEO Audit for: ${analysis.url}`);
 
-    const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
     let session, browser, page;
 
     try {
+        const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
         session = await bb.sessions.create();
         browser = await chromium.connectOverCDP(session.connectUrl);
         const context = browser.contexts()[0];
