@@ -73,6 +73,16 @@ const analysisSchema = new mongoose.Schema({
         density: Number
     }],
     
+    // Advanced Technical SEO
+    advancedSEO: {
+        hasSSL: { type: Boolean, default: false },
+        sslIssuer: { type: String, default: "" },
+        sslValidTo: { type: Date },
+        hasRobotsTxt: { type: Boolean, default: false },
+        hasSitemap: { type: Boolean, default: false },
+        schemaTypes: [{ type: String }]
+    },
+    
     // Detected Issues
     issues: [issueSchema]
 }, { timestamps: true });

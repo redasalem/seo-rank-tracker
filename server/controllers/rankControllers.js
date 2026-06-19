@@ -1,4 +1,5 @@
 import KeywordTracking from "../models/keywordTraking.js";
+import User from "../models/User.js";
 import { processSingleKeyword } from "../services/keywordTrakingService.js";
 
 // Add a new keyword for tracking
@@ -33,6 +34,17 @@ export const addKeyword = async (req, res) => {
         const existingTracking = await KeywordTracking.findOne({ userId, keyword, domain });
         if (existingTracking) {
             return res.status(409).json({ message: "You are already tracking this keyword for this domain" });
+        }
+
+        // Limit Check for Free Plan (Max 10 keywords)
+        const user = await User.findById(userId);
+        if (user && user.plan === "free") {
+            const count = await KeywordTracking.countDocuments({ userId });
+            if (count >= 10) {
+                return res.status(403).json({ 
+                    message: "You have reached your limit of 10 keywords on the Free plan. Please upgrade to Pro." 
+                });
+            }
         }
 
         // Create new tracking entry
@@ -76,21 +88,177 @@ export const addKeyword = async (req, res) => {
     }
 };
 
-// Get all tracked keywords for a user
+// Get tracked keywords for a user with pagination, search, and filtering
 export const getKeywords = async (req, res) => {
     try {
         const userId = req.user.id;
         
-        // Fetch tracking entries for this user, sorted by newest first
-        const trackingEntries = await KeywordTracking.find({ userId }).sort({ createdAt: -1 });
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const search = req.query.search || "";
+        const status = req.query.status || "all"; // all, active, paused
+        const sortBy = req.query.sortBy || "newest"; // newest, rank_asc, rank_desc, change
+
+        const skip = (page - 1) * limit;
+        
+        // Build query
+        const query = { userId };
+        
+        if (search) {
+            query.$or = [
+                { keyword: { $regex: search, $options: "i" } },
+                { domain: { $regex: search, $options: "i" } }
+            ];
+        }
+        
+        if (status === "active") query.active = true;
+        else if (status === "paused") query.active = false;
+        
+        // Build sort object
+        let sortObj = { createdAt: -1 };
+        if (sortBy === "rank_asc") sortObj = { currentPosition: 1 };
+        else if (sortBy === "rank_desc") sortObj = { currentPosition: -1 };
+        else if (sortBy === "change") sortObj = { positionChange: -1 };
+        
+        const trackingEntries = await KeywordTracking.find(query)
+            .sort(sortObj)
+            .skip(skip)
+            .limit(limit);
+            
+        const total = await KeywordTracking.countDocuments(query);
         
         res.status(200).json({
             count: trackingEntries.length,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit) || 1,
             keywords: trackingEntries
         });
 
     } catch (error) {
         console.error("Error fetching keywords:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// Get aggregated Dashboard stats
+export const getDashboardStats = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // Use aggregation to calculate all stats efficiently
+        const stats = await KeywordTracking.aggregate([
+            { $match: { userId } },
+            {
+                $group: {
+                    _id: null,
+                    totalKeywords: { $sum: 1 },
+                    inTop10: {
+                        $sum: { $cond: [{ $and: [{ $ne: ["$currentPosition", null] }, { $lte: ["$currentPosition", 10] }] }, 1, 0] }
+                    },
+                    inTop3: {
+                        $sum: { $cond: [{ $and: [{ $ne: ["$currentPosition", null] }, { $lte: ["$currentPosition", 3] }] }, 1, 0] }
+                    },
+                    inTop50: {
+                        $sum: { $cond: [{ $and: [{ $ne: ["$currentPosition", null] }, { $lte: ["$currentPosition", 50] }, { $gt: ["$currentPosition", 10] }] }, 1, 0] }
+                    },
+                    unranked: {
+                        $sum: { $cond: [{ $or: [{ $eq: ["$currentPosition", null] }, { $gt: ["$currentPosition", 50] }] }, 1, 0] }
+                    },
+                    bestPosition: { $min: "$currentPosition" },
+                    sumRank: { $sum: "$currentPosition" },
+                    rankedCount: { $sum: { $cond: [{ $ne: ["$currentPosition", null] }, 1, 0] } }
+                }
+            }
+        ]);
+        
+        const result = stats[0] || {
+            totalKeywords: 0,
+            inTop10: 0,
+            inTop3: 0,
+            inTop50: 0,
+            unranked: 0,
+            bestPosition: null,
+            sumRank: 0,
+            rankedCount: 0
+        };
+        
+        const averageRank = result.rankedCount > 0 ? Math.round(result.sumRank / result.rankedCount) : null;
+        
+        // Find biggest improver
+        const biggestImprover = await KeywordTracking.findOne({ userId })
+            .sort({ positionChange: -1 })
+            .limit(1)
+            .select("keyword positionChange");
+            
+        // Get recent keywords for dashboard list
+        const recentKeywords = await KeywordTracking.find({ userId })
+            .sort({ createdAt: -1 })
+            .limit(5)
+            .select("keyword domain currentPosition positionChange status");
+            
+        // Build line chart data from history
+        const historyDataPipeline = await KeywordTracking.aggregate([
+            { $match: { userId } },
+            { $unwind: "$rankHistory" },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$rankHistory.date" } },
+                    totalRank: { $sum: "$rankHistory.position" },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } },
+            { $limit: 7 }
+        ]);
+        
+        const historyData = historyDataPipeline.map(item => {
+            const dateObj = new Date(item._id);
+            // Re-adjust for local time zone shift so it doesn't show previous day
+            dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+            return {
+                date: dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                averageRank: Math.round(item.totalRank / item.count)
+            };
+        });
+        
+        // Include today's data in the history chart
+        if (result.rankedCount > 0) {
+            const todayStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const existingToday = historyData.find(h => h.date === todayStr);
+            if (!existingToday) {
+                historyData.push({
+                    date: todayStr,
+                    averageRank: averageRank
+                });
+            } else {
+                existingToday.averageRank = averageRank;
+            }
+        }
+        
+        res.status(200).json({
+            stats: {
+                totalKeywords: result.totalKeywords,
+                inTop10: result.inTop10,
+                bestPosition: result.bestPosition,
+                averageRank: averageRank,
+                biggestImprover: biggestImprover ? {
+                    keyword: biggestImprover.keyword,
+                    positionChange: biggestImprover.positionChange
+                } : null,
+                rankDistribution: [
+                    { name: 'Top 3', value: result.inTop3, color: '#10b981' },
+                    { name: 'Pos 4-10', value: result.inTop10 - result.inTop3, color: '#3b82f6' },
+                    { name: 'Pos 11-50', value: result.inTop50, color: '#f59e0b' },
+                    { name: 'Unranked', value: result.unranked, color: '#6b7280' },
+                ].filter(d => d.value > 0),
+                historyData: historyData,
+                recentKeywords: recentKeywords
+            }
+        });
+        
+    } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };
@@ -188,6 +356,54 @@ export const toggleTracking = async (req, res) => {
 
     } catch (error) {
         console.error("Error toggling keyword tracking:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
+// Get Global Competitors (Aggregation)
+export const getGlobalCompetitors = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        
+        // MongoDB Aggregation Pipeline
+        const competitors = await KeywordTracking.aggregate([
+            { $match: { userId } },
+            // Unwind the competitors array so each competitor is a document
+            { $unwind: "$competitors" },
+            // Group by the competitor's domain
+            {
+                $group: {
+                    _id: "$competitors.domain",
+                    keywordCount: { $sum: 1 }, // How many of user's tracked keywords they rank for
+                    avgPosition: { $avg: "$competitors.position" },
+                    bestPosition: { $min: "$competitors.position" },
+                    keywords: { $push: { keyword: "$keyword", position: "$competitors.position", url: "$competitors.url" } }
+                }
+            },
+            // Sort by keywordCount (most frequent competitor first) and then by avgPosition
+            { $sort: { keywordCount: -1, avgPosition: 1 } },
+            // limit to top 100 global competitors
+            { $limit: 100 },
+            // Project nicely
+            {
+                $project: {
+                    _id: 0,
+                    domain: "$_id",
+                    keywordCount: 1,
+                    avgPosition: { $round: ["$avgPosition", 1] },
+                    bestPosition: 1,
+                    // keep top 5 keywords in the array to show in preview
+                    topKeywords: { $slice: ["$keywords", 5] }
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            competitors
+        });
+    } catch (error) {
+        console.error("Error fetching global competitors:", error);
         res.status(500).json({ message: "Server error", error: error.message });
     }
 };

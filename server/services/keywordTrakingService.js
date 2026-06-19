@@ -1,5 +1,6 @@
 import KeywordTracking from "../models/keywordTraking.js";
 import { createBrowser, closeBrowser, scrapeGoogle } from "./rankTrakerService.js";
+import { createNotification } from "./notificationService.js";
 
 // ─── تحليل النتائج: إيجاد موقع المستخدم + المنافسين ──────────────────────
 function analyzeResults(results, targetDomain) {
@@ -39,11 +40,20 @@ function analyzeResults(results, targetDomain) {
 // ─── تحديث بيانات كلمة مفتاحية واحدة في الداتابيز ────────────────────────
 function updateKeywordData(tracking, found, competitors) {
     const oldPosition = tracking.currentPosition;
+    let rankAlert = null;
 
     if (found) {
         tracking.currentPosition = found.position;
         tracking.currentPage = found.page;
         tracking.positionChange = oldPosition ? oldPosition - found.position : 0;
+
+        if (oldPosition && tracking.positionChange > 0) {
+            rankAlert = { type: "success", change: tracking.positionChange, newPos: found.position };
+        } else if (oldPosition && tracking.positionChange < 0) {
+            rankAlert = { type: "warning", change: tracking.positionChange, newPos: found.position };
+        } else if (!oldPosition && found.position) {
+            rankAlert = { type: "info", isNew: true, newPos: found.position };
+        }
 
         // تحديث أفضل ترتيب
         if (!tracking.bestPosition || found.position < tracking.bestPosition) {
@@ -60,11 +70,16 @@ function updateKeywordData(tracking, found, competitors) {
     } else {
         tracking.currentPosition = null;
         tracking.currentPage = null;
-        tracking.positionChange = 0;
+        tracking.positionChange = oldPosition ? -oldPosition : 0;
+
+        if (oldPosition) {
+            rankAlert = { type: "warning", isDropped: true, oldPos: oldPosition };
+        }
     }
 
     tracking.competitors = competitors;
     tracking.status = "success";
+    return rankAlert;
 }
 
 // ─── معالجة كلمة مفتاحية واحدة ────────────────────────────────────────────
@@ -78,9 +93,34 @@ async function processOneKeyword(page, tracking) {
         // 2. تحليل النتائج
         const { found, competitors } = analyzeResults(results, tracking.domain);
 
-        // 3. تحديث البيانات
-        updateKeywordData(tracking, found, competitors);
+        // 3. تحديث البيانات وإرسال التنبيه
+        const rankAlert = updateKeywordData(tracking, found, competitors);
         await tracking.save();
+
+        if (rankAlert && tracking.userId) {
+            let title = "";
+            let message = "";
+            if (rankAlert.isNew) {
+                title = "New Ranking!";
+                message = `Your keyword "${tracking.keyword}" for ${tracking.domain} just ranked at #${rankAlert.newPos}.`;
+            } else if (rankAlert.isDropped) {
+                title = "Rank Dropped Out! 📉";
+                message = `Your keyword "${tracking.keyword}" for ${tracking.domain} dropped out of the top 50 results (previously #${rankAlert.oldPos}).`;
+            } else if (rankAlert.type === "success") {
+                title = "Rank Improved! 🚀";
+                message = `Your keyword "${tracking.keyword}" moved up by ${rankAlert.change} positions to #${rankAlert.newPos}.`;
+            } else {
+                title = "Rank Dropped 📉";
+                message = `Your keyword "${tracking.keyword}" dropped by ${Math.abs(rankAlert.change)} positions to #${rankAlert.newPos}.`;
+            }
+            await createNotification({ 
+                userId: tracking.userId, 
+                title, 
+                message, 
+                type: rankAlert.type,
+                link: `/rank/${tracking._id}` 
+            });
+        }
 
         if (found) {
             console.log(`  ✅ Found at #${found.position} (page ${found.page})`);

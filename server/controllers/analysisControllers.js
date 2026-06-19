@@ -1,4 +1,5 @@
 import Analysis from "../models/analysisModel.js";
+import User from "../models/User.js";
 import { runFullSEOAnalysis } from "../services/seoAnalysisService.js";
 
 // @desc    Start a new SEO analysis
@@ -13,6 +14,26 @@ export const startAnalysis = async (req, res) => {
             return res.status(400).json({ message: "URL is required" });
         }
 
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Reset count if it's a new day
+        const today = new Date().toDateString();
+        const lastAnalysisDate = user.lastAnalysisDate ? new Date(user.lastAnalysisDate).toDateString() : null;
+        
+        if (lastAnalysisDate !== today) {
+            user.analysisCount = 0;
+        }
+
+        // Check limits
+        if (user.plan === "free" && user.analysisCount >= 3) {
+            return res.status(403).json({ 
+                message: "You have reached your daily limit of 3 analyses on the Free plan. Please upgrade to Pro."
+            });
+        }
+
         // Validate and format URL
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             url = 'https://' + url;
@@ -25,6 +46,11 @@ export const startAnalysis = async (req, res) => {
         } catch (error) {
             return res.status(400).json({ message: "Invalid URL format" });
         }
+
+        // Increment count and save
+        user.analysisCount += 1;
+        user.lastAnalysisDate = new Date();
+        await user.save();
 
         // Create a new analysis record in 'processing' state
         const newAnalysis = await Analysis.create({
