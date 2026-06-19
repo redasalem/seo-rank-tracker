@@ -309,26 +309,6 @@ export const resetPassword = async (req, res) => {
     }
 };
 
-// ─── Verify Email ───────────────────────────────────────────────────────────
-export const verifyEmail = async (req, res) => {
-    try {
-        const { token } = req.params;
-
-        const user = await User.findOne({ emailVerificationToken: token });
-
-        if (!user) {
-            return res.status(400).json({ message: "Verification token is invalid or has expired" });
-        }
-
-        user.isEmailVerified = true;
-        user.emailVerificationToken = null;
-        await user.save();
-
-        res.status(200).json({ message: "Email verified successfully. You can now login." });
-    } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
-    }
-};
 
 // ─── Refresh Token ──────────────────────────────────────────────────────────
 export const refreshToken = async (req, res) => {
