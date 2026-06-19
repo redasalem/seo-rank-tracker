@@ -1,5 +1,5 @@
 import User from "../models/User.js";
-import Keyword from "../models/Keyword.js";
+import Keyword from "../models/keywordTracking.js";
 
 // ─── Get Dashboard Statistics ───────────────────────────────────────
 export const getStats = async (req, res) => {
