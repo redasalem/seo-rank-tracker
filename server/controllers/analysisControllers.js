@@ -47,10 +47,7 @@ export const startAnalysis = async (req, res) => {
             return res.status(400).json({ message: "Invalid URL format" });
         }
 
-        // Increment count and save
-        user.analysisCount += 1;
-        user.lastAnalysisDate = new Date();
-        await user.save();
+
 
         // Create a new analysis record in 'processing' state
         const newAnalysis = await Analysis.create({
@@ -63,18 +60,24 @@ export const startAnalysis = async (req, res) => {
         // 🔥 Wait for actual analysis to finish
         try {
             await runFullSEOAnalysis(newAnalysis._id);
+
+            // Increment count only upon successful analysis
+            user.analysisCount += 1;
+            user.lastAnalysisDate = new Date();
+            await user.save();
+
             res.status(201).json({
                 message: "Analysis completed",
                 analysisId: newAnalysis._id
             });
         } catch (err) {
             console.error(`⚠️ SEO scan failed for: ${url}`, err);
-            res.status(500).json({ message: "Analysis failed to complete" });
+            res.status(500).json({ message: "Analysis failed: " + (err.message || err.toString()) });
         }
 
     } catch (error) {
         console.error("Error starting analysis:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error: " + (error.message || error.toString()) });
     }
 };
 

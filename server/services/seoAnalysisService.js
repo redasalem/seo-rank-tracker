@@ -343,6 +343,7 @@ export async function runFullSEOAnalysis(analysisId) {
         console.error(`🚨 SEO Audit failed for ${analysis.url}:`, error.message);
         analysis.status = "failed";
         await analysis.save();
+        throw error;
     } finally {
         if (browser) {
             await page.close().catch(() => {});
