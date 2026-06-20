@@ -150,18 +150,26 @@ async function extractPageData(page) {
                 density: parseFloat(((count / Math.max(1, wordCount)) * 100).toFixed(2))
             }));
 
-        // 6. Schema Markup (Structured Data)
         const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
         const schemaTypes = [];
+        
+        const addType = (type) => {
+            if (Array.isArray(type)) {
+                type.forEach(t => { if (typeof t === 'string') schemaTypes.push(t) });
+            } else if (typeof type === 'string') {
+                schemaTypes.push(type);
+            }
+        };
+
         schemaScripts.forEach(script => {
             try {
                 const json = JSON.parse(script.textContent || "{}");
                 if (Array.isArray(json)) {
-                    json.forEach(item => { if (item['@type']) schemaTypes.push(item['@type']) });
+                    json.forEach(item => { if (item['@type']) addType(item['@type']) });
                 } else if (json['@type']) {
-                    schemaTypes.push(json['@type']);
+                    addType(json['@type']);
                 } else if (json['@graph']) {
-                    json['@graph'].forEach(item => { if (item['@type']) schemaTypes.push(item['@type']) });
+                    json['@graph'].forEach(item => { if (item['@type']) addType(item['@type']) });
                 }
             } catch(e) {}
         });

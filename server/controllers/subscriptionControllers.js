@@ -76,7 +76,11 @@ export const stripeWebhook = async (req, res) => {
         }
     } else {
         // Fallback for local testing without webhook secret
-        event = req.body;
+        try {
+            event = JSON.parse(payload.toString());
+        } catch (e) {
+            return res.status(400).send("Webhook Error: Invalid JSON");
+        }
     }
 
     try {
