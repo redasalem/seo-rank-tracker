@@ -5,7 +5,7 @@ import Notification from "../models/Notification.js";
 // @access  Private
 export const getNotifications = async (req, res) => {
     try {
-        const notifications = await Notification.find({ user: req.user._id })
+        const notifications = await Notification.find({ user: req.user.id })
             .sort({ createdAt: -1 })
             .limit(50); // Get latest 50
 
@@ -30,7 +30,7 @@ export const markAsRead = async (req, res) => {
         }
 
         // Make sure it belongs to the user
-        if (notification.user.toString() !== req.user._id.toString()) {
+        if (notification.user.toString() !== req.user.id.toString()) {
             return res.status(403).json({ success: false, message: "Not authorized" });
         }
 
@@ -49,7 +49,7 @@ export const markAsRead = async (req, res) => {
 export const markAllAsRead = async (req, res) => {
     try {
         await Notification.updateMany(
-            { user: req.user._id, isRead: false },
+            { user: req.user.id, isRead: false },
             { isRead: true }
         );
 
