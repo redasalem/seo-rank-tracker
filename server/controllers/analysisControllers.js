@@ -77,7 +77,7 @@ export const startAnalysis = async (req, res) => {
 
     } catch (error) {
         console.error("Error starting analysis:", error);
-        res.status(500).json({ message: "Server error: " + (error.message || error.toString()) });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -98,6 +98,36 @@ export const getAnalysis = async (req, res) => {
         res.status(200).json({ analysis });
     } catch (error) {
         console.error("Error fetching analysis:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// @desc    Get all analyses for the logged-in user (history)
+// @route   GET /api/analysis
+// @access  Private
+export const getUserAnalyses = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        const analyses = await Analysis.find({ userId })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .select("url domain overallScore status categories createdAt loadTime pageSize");
+
+        const total = await Analysis.countDocuments({ userId });
+
+        res.status(200).json({
+            analyses,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit) || 1
+        });
+    } catch (error) {
+        console.error("Error fetching user analyses:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };

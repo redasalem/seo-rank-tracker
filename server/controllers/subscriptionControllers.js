@@ -1,7 +1,12 @@
 import Stripe from "stripe";
 import User from "../models/User.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_mock"); // fallback for dev without keys
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+} else {
+    console.warn("⚠️ STRIPE_SECRET_KEY is not defined. Payments and subscriptions will not work.");
+}
 
 // @desc    Create Stripe Checkout Session for Pro plan
 // @route   POST /api/subscription/create-checkout-session
@@ -10,6 +15,10 @@ export const createCheckoutSession = async (req, res) => {
     try {
         const userId = req.user.id;
         const user = await User.findById(userId);
+
+        if (!stripe) {
+            return res.status(500).json({ success: false, message: "Payment service is not configured. Please contact support." });
+        }
 
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });

@@ -1,5 +1,5 @@
 import express from "express";
-import { startAnalysis, getAnalysis } from "../controllers/analysisControllers.js";
+import { startAnalysis, getAnalysis, getUserAnalyses } from "../controllers/analysisControllers.js";
 import auth from "../middleware/auth.js";
 import { validate, startAnalysisSchema, mongoIdSchema } from "../middleware/validations.js";
 
@@ -9,6 +9,7 @@ const analysisRouter = express.Router();
 analysisRouter.use(auth);
 
 // Routes
+analysisRouter.get("/", getUserAnalyses);
 analysisRouter.post("/start", validate(startAnalysisSchema), startAnalysis);
 analysisRouter.get("/:id", validate(mongoIdSchema, "params"), getAnalysis);
 

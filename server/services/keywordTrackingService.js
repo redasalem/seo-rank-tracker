@@ -136,33 +136,40 @@ async function processOneKeyword(page, tracking) {
 
 // ─── معالجة جميع الكلمات المعلقة ──────────────────────────────────────────
 export async function processAllPendingKeywords() {
-    const pendingKeywords = await KeywordTracking.find({
-        status: "pending",
-        active: true,
-    }).limit(2);
-
-    if (pendingKeywords.length === 0) {
-        console.log("📭 No pending keywords to process.");
-        return;
-    }
-
-    console.log(`📋 Found ${pendingKeywords.length} pending keyword(s)`);
-
+    console.log("⏰ Starting to process all pending keywords...");
+    
+    let processedCount = 0;
     let browser, page;
+    let browserOpen = false;
 
     try {
-        // فتح جلسة متصفح واحدة لكل الكلمات (توفير موارد)
-        ({ browser, page } = await createBrowser());
+        while (true) {
+            const pendingKeywords = await KeywordTracking.find({
+                status: "pending",
+                active: true,
+            }).limit(2); // Batch size of 2 to not overwhelm memory
 
-        for (const tracking of pendingKeywords) {
-            await processOneKeyword(page, tracking);
-            // انتظار بين كل كلمة والأخرى
-            await page.waitForTimeout(2000 + Math.random() * 2000);
+            if (pendingKeywords.length === 0) {
+                console.log(`📭 No more pending keywords. Processed total: ${processedCount}`);
+                break;
+            }
+
+            if (!browserOpen) {
+                ({ browser, page } = await createBrowser());
+                browserOpen = true;
+            }
+
+            for (const tracking of pendingKeywords) {
+                await processOneKeyword(page, tracking);
+                processedCount++;
+                // انتظار بين كل كلمة والأخرى لتجنب الحظر
+                await page.waitForTimeout(2000 + Math.random() * 2000);
+            }
         }
     } catch (error) {
         console.error("🚨 Session error:", error.message);
     } finally {
-        if (browser) {
+        if (browser && browserOpen) {
             await closeBrowser(browser, page);
         }
     }

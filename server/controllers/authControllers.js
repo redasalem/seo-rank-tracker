@@ -35,7 +35,7 @@ export const register = async (req, res) => {
             message: "User registered successfully. You can now login."
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -101,7 +101,7 @@ export const login = async (req, res) => {
             },
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -126,7 +126,7 @@ export const getCurrentUser = async (req, res) => {
 
         res.status(200).json({ user });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -142,7 +142,7 @@ export const logout = async (req, res) => {
         });
         res.status(200).json({ message: "Logged out successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -183,7 +183,7 @@ export const updateProfile = async (req, res) => {
             }
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -217,7 +217,7 @@ export const updatePassword = async (req, res) => {
 
         res.status(200).json({ message: "Password updated successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -275,7 +275,7 @@ export const forgotPassword = async (req, res) => {
 
         res.status(200).json(responseData);
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -305,7 +305,7 @@ export const resetPassword = async (req, res) => {
 
         res.status(200).json({ message: "Password has been reset successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 

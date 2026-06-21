@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import KeywordTracking from "../models/keywordTracking.js";
 import User from "../models/User.js";
+import Analysis from "../models/analysisModel.js";
 import { processSingleKeyword } from "../services/keywordTrackingService.js";
 
 // Add a new keyword for tracking
@@ -84,7 +86,7 @@ export const addKeyword = async (req, res) => {
             return res.status(409).json({ message: "You are already tracking this keyword for this domain" });
         }
 
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -137,14 +139,14 @@ export const getKeywords = async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching keywords:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
 // Get aggregated Dashboard stats
 export const getDashboardStats = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = new mongoose.Types.ObjectId(req.user.id);
         
         // Use aggregation to calculate all stats efficiently
         const stats = await KeywordTracking.aggregate([
@@ -236,6 +238,15 @@ export const getDashboardStats = async (req, res) => {
             }
         }
         
+        // Get recent analyses for dashboard
+        const recentAnalyses = await Analysis.find({ userId })
+            .sort({ createdAt: -1 })
+            .limit(3)
+            .select("url domain overallScore status createdAt categories");
+            
+        // Get user for limits
+        const user = await User.findById(userId);
+
         res.status(200).json({
             stats: {
                 totalKeywords: result.totalKeywords,
@@ -253,13 +264,19 @@ export const getDashboardStats = async (req, res) => {
                     { name: 'Unranked', value: result.unranked, color: '#6b7280' },
                 ].filter(d => d.value > 0),
                 historyData: historyData,
-                recentKeywords: recentKeywords
+                recentKeywords: recentKeywords,
+                recentAnalyses: recentAnalyses,
+                analysisLimit: user ? {
+                    plan: user.plan,
+                    used: user.analysisCount || 0,
+                    max: user.plan === 'free' ? 10 : 'unlimited'
+                } : null
             }
         });
         
     } catch (error) {
         console.error("Error fetching dashboard stats:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -279,7 +296,7 @@ export const getKeyword = async (req, res) => {
 
     } catch (error) {
         console.error("Error fetching single keyword:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -310,7 +327,7 @@ export const refreshKeyword = async (req, res) => {
         
     } catch (error) {
         console.error("Error refreshing keyword:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -330,7 +347,7 @@ export const deleteKeyword = async (req, res) => {
 
     } catch (error) {
         console.error("Error deleting keyword:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -356,14 +373,14 @@ export const toggleTracking = async (req, res) => {
 
     } catch (error) {
         console.error("Error toggling keyword tracking:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
 
 // Get Global Competitors (Aggregation)
 export const getGlobalCompetitors = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = new mongoose.Types.ObjectId(req.user.id);
         
         // MongoDB Aggregation Pipeline
         const competitors = await KeywordTracking.aggregate([
@@ -404,6 +421,6 @@ export const getGlobalCompetitors = async (req, res) => {
         });
     } catch (error) {
         console.error("Error fetching global competitors:", error);
-        res.status(500).json({ message: "Server error", error: error.message });
+        res.status(500).json({ message: "Server error" });
     }
 };
