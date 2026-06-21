@@ -84,12 +84,8 @@ export const stripeWebhook = async (req, res) => {
             return res.status(400).send(`Webhook Error: ${err.message}`);
         }
     } else {
-        // Fallback for local testing without webhook secret
-        try {
-            event = JSON.parse(payload.toString());
-        } catch (e) {
-            return res.status(400).send("Webhook Error: Invalid JSON");
-        }
+        console.error("⚠️ STRIPE_WEBHOOK_SECRET is not configured. Rejecting webhook.");
+        return res.status(500).json({ error: "Webhook secret not configured" });
     }
 
     try {
@@ -131,5 +127,39 @@ export const stripeWebhook = async (req, res) => {
     } catch (error) {
         console.error("Webhook processing error:", error);
         res.status(500).send("Webhook processing failed");
+    }
+};
+
+// @desc    Create Stripe Customer Portal Session
+// @route   POST /api/subscription/create-portal-session
+// @access  Private
+export const createPortalSession = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const user = await User.findById(userId);
+
+        if (!stripe) {
+            return res.status(500).json({ success: false, message: "Payment service is not configured." });
+        }
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (!user.stripeCustomerId) {
+            return res.status(400).json({ success: false, message: "No billing information found for this account." });
+        }
+
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+
+        const session = await stripe.billingPortal.sessions.create({
+            customer: user.stripeCustomerId,
+            return_url: `${frontendUrl}/settings?tab=subscription`,
+        });
+
+        res.status(200).json({ success: true, url: session.url });
+    } catch (error) {
+        console.error("Error creating portal session:", error);
+        res.status(500).json({ success: false, message: "Failed to create billing portal session" });
     }
 };
