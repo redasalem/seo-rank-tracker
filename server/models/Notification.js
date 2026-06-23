@@ -12,8 +12,8 @@ const notificationSchema = new mongoose.Schema(
             required: true,
         },
         message: {
-            type: String,
-            required: true,
+            key: { type: String, required: true },
+            data: { type: mongoose.Schema.Types.Mixed, default: {} }
         },
         type: {
             type: String,

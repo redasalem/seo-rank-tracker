@@ -99,24 +99,31 @@ async function processOneKeyword(page, tracking) {
 
         if (rankAlert && tracking.userId) {
             let title = "";
-            let message = "";
+            let messageKey = "";
+            let messageData = {};
+            
             if (rankAlert.isNew) {
                 title = "New Ranking!";
-                message = `Your keyword "${tracking.keyword}" for ${tracking.domain} just ranked at #${rankAlert.newPos}.`;
+                messageKey = "notifications.rank_new";
+                messageData = { keyword: tracking.keyword, domain: tracking.domain, newPos: rankAlert.newPos };
             } else if (rankAlert.isDropped) {
                 title = "Rank Dropped Out! 📉";
-                message = `Your keyword "${tracking.keyword}" for ${tracking.domain} dropped out of the top 50 results (previously #${rankAlert.oldPos}).`;
+                messageKey = "notifications.rank_dropped_out";
+                messageData = { keyword: tracking.keyword, domain: tracking.domain, oldPos: rankAlert.oldPos };
             } else if (rankAlert.type === "success") {
                 title = "Rank Improved! 🚀";
-                message = `Your keyword "${tracking.keyword}" moved up by ${rankAlert.change} positions to #${rankAlert.newPos}.`;
+                messageKey = "notifications.rank_improved";
+                messageData = { keyword: tracking.keyword, change: rankAlert.change, newPos: rankAlert.newPos };
             } else {
                 title = "Rank Dropped 📉";
-                message = `Your keyword "${tracking.keyword}" dropped by ${Math.abs(rankAlert.change)} positions to #${rankAlert.newPos}.`;
+                messageKey = "notifications.rank_dropped";
+                messageData = { keyword: tracking.keyword, change: Math.abs(rankAlert.change), newPos: rankAlert.newPos };
             }
+
             await createNotification({ 
                 userId: tracking.userId, 
                 title, 
-                message, 
+                message: { key: messageKey, data: messageData },
                 type: rankAlert.type,
                 link: `/rank/${tracking._id}` 
             });
