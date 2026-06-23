@@ -22,8 +22,6 @@ afterEach(async () => {
 
 // Disconnect and stop the server after all tests
 afterAll(async () => {
-    await mongoose.disconnect();
-    if (mongoServer) {
-        await mongoServer.stop();
-    }
+  await mongoose.disconnect();
+  await mongoServer.stop();
 });
