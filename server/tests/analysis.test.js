@@ -7,11 +7,13 @@ describe('Analysis Endpoints (Plan Limits)', () => {
     let userId;
 
     beforeEach(async () => {
-        // Create a verified free user before each test
+        const bcrypt = await import('bcrypt');
+        const hashedPassword = await bcrypt.hash('Password123!', 10);
         const user = await User.create({
             name: 'Free User',
             email: 'free@example.com',
-            password: 'Password123!',
+            password: hashedPassword,
+            isEmailVerified: true,
             isVerified: true,
             plan: 'free',
             analysisCount: 0
