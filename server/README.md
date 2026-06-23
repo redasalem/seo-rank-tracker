@@ -10,17 +10,27 @@
 
 <br/>
 
+<div align="center">
+  <a href="https://seo-rank-tracer-client.vercel.app" target="_blank"><strong>🌐 Live Frontend Demo</strong></a>
+  <span> &nbsp;|&nbsp; </span>
+  <a href="https://seo-rank-tracer-server.vercel.app" target="_blank"><strong>⚙️ Live Backend API</strong></a>
+</div>
+
+<br/>
+
 > A robust, serverless-ready backend service designed to track SEO keyword rankings and perform deep page analysis using headless browser automation.
 
 ---
 
 ## ✨ Key Features
 
-- **🔐 Secure Authentication:** Complete JWT-based authentication flow with encrypted passwords (bcrypt).
+- **🔐 Secure Authentication:** Complete JWT-based authentication flow with encrypted passwords (bcrypt) and HttpOnly refresh tokens.
 - **🕷️ Headless Scraping:** Utilizes `Playwright` and `BrowserbaseHQ` to reliably scrape search engine results and bypass basic bot detections.
 - **🔄 Automated Tracking:** Built-in support for Vercel Cron Jobs to automatically refresh keyword rankings daily.
 - **🛡️ API Security:** Configured with strict CORS policies and robust Rate Limiting to prevent abuse.
 - **📊 Deep Analysis Engine:** Analyzes page meta tags, heading structures, image alt texts, and performance metrics.
+- **🔔 Notification System:** Real-time in-app notifications for rank updates and system events.
+- **💳 Subscriptions:** Stripe integration for Pro/Premium limits management.
 
 ---
 
@@ -33,6 +43,7 @@ graph TD
     
     B -->|User & Rank Data| D[(MongoDB)]
     B -->|Scrape Request| E[Browserbase / Playwright]
+    B -->|Payment Webhooks| H[Stripe]
     
     E -->|Automated Browsing| F[Google Search Results]
     E -->|DOM Analysis| G[Target Websites]
@@ -53,14 +64,19 @@ MONGODB_URL="mongodb://127.0.0.1:27017/seo"
 
 # Security
 JWT_SECRET="your_jwt_secret_here"
+REFRESH_TOKEN_SECRET="your_refresh_secret_here"
 CRON_SECRET="your_cron_secret_here"
 
 # Scraper (Browserbase)
 BROWSERBASE_API_KEY="your_browserbase_api_key_here"
 BROWSERBASE_PROJECT_ID="your_browserbase_project_id_here"
 
+# Stripe 
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+
 # Security (CORS)
-FRONTEND_URL="https://seo-rank-tracer-frontend.vercel.app"
+FRONTEND_URL="https://seo-rank-tracer-client.vercel.app"
 ```
 
 > [!WARNING]
@@ -68,70 +84,19 @@ FRONTEND_URL="https://seo-rank-tracer-frontend.vercel.app"
 
 ---
 
-## 📚 API Documentation
+## 📚 API Documentation Snapshot
 
-### 🔒 Authentication (Header)
-All protected routes require a Bearer token in the request header:
-```http
-Authorization: Bearer <your_jwt_token_here>
-```
+*For a full detailed guide, please refer to `API_DOCUMENTATION.md`.*
 
-### 🧑‍💻 1. Auth API (`/api/auth`)
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :---: |
-| `POST` | `/register` | Register a new user | ❌ |
-| `POST` | `/login` | Authenticate user & get token | ❌ |
-| `POST` | `/logout` | Logout user | ❌ |
-| `GET`  | `/getCurrentUser` | Get logged-in user details | ✅ |
-
-**Example Payload (`/register` & `/login`):**
-```json
-{
-  "email": "user@example.com",
-  "password": "strongpassword123"
-}
-```
-
-### 📈 2. Rank Tracking API (`/api/rank`)
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :---: |
-| `POST` | `/add` | Add a new keyword & fetch initial rank | ✅ |
-| `GET`  | `/` | Get all tracked keywords | ✅ |
-| `GET`  | `/:id` | Get keyword history & competitors | ✅ |
-| `POST` | `/:id/refresh` | Force manual refresh of rank | ✅ |
-| `PUT`  | `/:id/toggle` | Enable/Disable daily background tracking | ✅ |
-| `DELETE`| `/:id` | Delete keyword tracking | ✅ |
-
-**Example Payload (`/add`):**
-```json
-{
-  "keyword": "best smartphones 2024",
-  "url": "https://example.com/best-smartphones",
-  "country": "US" 
-}
-```
-
-### 🔍 3. SEO Analysis API (`/api/analysis`)
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :---: |
-| `POST` | `/start` | Start deep SEO analysis via headless browser | ✅ |
-| `GET`  | `/:id` | Get detailed SEO analysis report | ✅ |
-
-**Example Payload (`/start`):**
-```json
-{
-  "url": "https://example.com"
-}
-```
-
-### ⏰ 4. Automated Cron Jobs (`/api/cron`)
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :---: |
-| `GET` | `/daily` | Updates all active keywords. Triggered exclusively by Vercel Cron. | ✅ (`CRON_SECRET`) |
+| Module | Endpoints Examples | Description |
+| :--- | :--- | :--- |
+| **Auth** | `/api/auth/register`, `/api/auth/login`, `/api/auth/refresh` | Full JWT authentication flow with Password recovery |
+| **Rank** | `/api/rank/add`, `/api/rank/stats`, `/api/rank/:id` | Add and track SEO keywords and fetch competitors |
+| **Analysis** | `/api/analysis/start`, `/api/analysis` | Trigger deep SEO analysis scans |
+| **Notifications** | `/api/notifications`, `/api/notifications/read-all` | Fetch and manage user notifications |
+| **Subscription** | `/api/subscription/create-checkout-session` | Stripe payment gateway and customer portal |
+| **Admin** | `/api/admin/stats`, `/api/admin/users` | Admin panel metrics and user management |
+| **Cron** | `/api/cron/daily` | Vercel cron background updates |
 
 ---
 
@@ -143,13 +108,18 @@ Authorization: Bearer <your_jwt_token_here>
    ```
 
 2. **Setup your environment:**
-   Copy `.env.example` to `.env` and fill in your MongoDB URI and Browserbase keys.
+   Copy `.env.example` to `.env` and fill in your MongoDB URI and API keys.
 
 3. **Start the development server:**
    ```bash
    npm run server
    ```
    *The server will start on `http://localhost:5000` with nodemon watching for changes.*
+
+4. **Run Tests:**
+   ```bash
+   npm test
+   ```
 
 ---
 

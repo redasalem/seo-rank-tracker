@@ -13,6 +13,14 @@
 
 <br/>
 
+<div align="center">
+  <a href="https://seo-rank-tracer-client.vercel.app" target="_blank"><strong>🌐 Live Frontend Demo</strong></a>
+  <span> &nbsp;|&nbsp; </span>
+  <a href="https://seo-rank-tracer-server.vercel.app" target="_blank"><strong>⚙️ Live Backend API</strong></a>
+</div>
+
+<br/>
+
 > A full-stack SEO tool that tracks keyword rankings on Google, performs deep SEO page analysis, and monitors competitors — all powered by headless browser automation.
 
 ---
@@ -143,13 +151,13 @@ See [server/API_DOCUMENTATION.md](server/API_DOCUMENTATION.md) for the full API 
 
 | Module | Base Path | Description |
 |---|---|---|
-| Auth | `/api/auth` | Register, Login, Logout, Profile, Password Reset |
-| Rank Tracking | `/api/rank` | Add/Get/Delete keywords, Refresh rankings |
-| SEO Analysis | `/api/analysis` | Start analysis, Get report |
-| Notifications | `/api/notifications` | Get/Mark notifications |
-| Subscriptions | `/api/subscription` | Stripe checkout, Webhooks |
-| Admin | `/api/admin` | User management (admin only) |
-| Cron | `/api/cron` | Automated daily rank updates |
+| Auth | `/api/auth` | Register, Login, Logout, Profile, Password Reset (Cookies+JWT) |
+| Rank Tracking | `/api/rank` | Add/Get/Delete keywords, Refresh rankings, Competitors |
+| SEO Analysis | `/api/analysis` | Start headless browser analysis, Get comprehensive reports |
+| Notifications | `/api/notifications` | Get user alerts (Rank changes, Limits), Mark as read |
+| Subscriptions | `/api/subscription` | Stripe checkout session, Customer Portal, Webhooks |
+| Admin | `/api/admin` | Global system metrics, Manage user plans (Admin only) |
+| Cron | `/api/cron` | Vercel triggered background task for daily rank updates |
 
 ---
 
