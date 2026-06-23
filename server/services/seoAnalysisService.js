@@ -299,12 +299,23 @@ export async function runFullSEOAnalysis(analysisId) {
         const context = browser.contexts()[0];
         page = context.pages()[0];
 
+        // Block heavy resources to speed up page load
+        await page.route("**/*", (route) => {
+            const type = route.request().resourceType();
+            if (["image", "stylesheet", "font", "media"].includes(type)) {
+                route.abort();
+            } else {
+                route.continue();
+            }
+        });
+
         // 1. Measure Performance & Fetch Page
         const startTime = Date.now();
         let pageSizeBytes = 0;
         
         page.on('response', async (response) => {
             try {
+                // Approximate size since we are blocking resources, but this is fine for SEO HTML
                 const buffer = await response.body();
                 pageSizeBytes += buffer.length;
             } catch (e) {
@@ -312,15 +323,18 @@ export async function runFullSEOAnalysis(analysisId) {
             }
         });
 
-        await page.goto(analysis.url, { waitUntil: "networkidle", timeout: 45000 });
+        // Use domcontentloaded instead of networkidle, and a shorter timeout (15s)
+        await page.goto(analysis.url, { waitUntil: "domcontentloaded", timeout: 15000 });
         const loadTime = Date.now() - startTime;
 
-        // 2. Extract Data
-        const extractedData = await extractPageData(page);
+        // 2. Extract Data & Run External Checks in Parallel
+        const [extractedData, sslInfo, filesInfo] = await Promise.all([
+            extractPageData(page),
+            checkSSL(analysis.url),
+            checkFiles(analysis.url)
+        ]);
 
         // 2.5 Extract Advanced SEO
-        const sslInfo = await checkSSL(analysis.url);
-        const filesInfo = await checkFiles(analysis.url);
         const advancedSEO = {
             ...sslInfo,
             ...filesInfo,

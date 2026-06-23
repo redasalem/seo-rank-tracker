@@ -29,52 +29,38 @@ export async function closeBrowser(browser, page) {
 
 // ─── البحث في جوجل واستخراج النتائج الخام ─────────────────────────────────
 export async function scrapeGoogle(page, keyword, country = "us") {
-    const allResults = [];
+    // استخدم num=50 لجلب 50 نتيجة في صفحة واحدة لتجنب التنقل بين الصفحات وتوفير الوقت
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&gl=${country.toLowerCase()}&num=50`;
 
-    for (let pageNum = 0; pageNum < MAX_PAGES; pageNum++) {
-        const start = pageNum * 10;
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(keyword)}&gl=${country.toLowerCase()}&start=${start}`;
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForSelector("#search", { timeout: 10000 }).catch(() => null);
 
-        await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-        await page.waitForSelector("#search", { timeout: 10000 }).catch(() => null);
+    // استخراج نتائج البحث العضوية من الصفحة
+    const results = await page.evaluate(() => {
+        const items = [];
+        const searchResults = document.querySelectorAll("#search .g");
 
-        // استخراج نتائج البحث العضوية من الصفحة
-        const results = await page.evaluate((currentPage) => {
-            const items = [];
-            const searchResults = document.querySelectorAll("#search .g");
+        searchResults.forEach((el) => {
+            const linkEl = el.querySelector("a[href]");
+            const snippetEl = el.querySelector("[data-sncf], .VwiC3b, .IsZvec");
 
-            searchResults.forEach((el) => {
-                const linkEl = el.querySelector("a[href]");
-                const snippetEl = el.querySelector("[data-sncf], .VwiC3b, .IsZvec");
-
-                if (linkEl) {
-                    const url = linkEl.href;
-                    if (url && !url.includes("google.com/search") && url.startsWith("http")) {
-                        items.push({
-                            url,
-                            snippet: snippetEl ? snippetEl.textContent.trim() : "",
-                            page: currentPage + 1,
-                        });
-                    }
+            if (linkEl) {
+                const url = linkEl.href;
+                if (url && !url.includes("google.com/search") && url.startsWith("http")) {
+                    items.push({
+                        url,
+                        snippet: snippetEl ? snippetEl.textContent.trim() : "",
+                        page: Math.floor(items.length / 10) + 1, // محاكاة رقم الصفحة بناءً على الترتيب
+                    });
                 }
-            });
+            }
+        });
 
-            return items;
-        }, pageNum);
-
-        allResults.push(...results);
-
-        // لا نتائج؟ نتوقف
-        if (results.length === 0) break;
-
-        // تأخير بسيط بين الصفحات لتجنب الحظر
-        if (pageNum < MAX_PAGES - 1) {
-            await page.waitForTimeout(1500 + Math.random() * 1000);
-        }
-    }
+        return items;
+    });
 
     // ترقيم النتائج
-    return allResults.map((result, index) => ({
+    return results.map((result, index) => ({
         ...result,
         position: index + 1,
     }));

@@ -141,13 +141,21 @@ export async function processAllPendingKeywords() {
     let processedCount = 0;
     let browser, page;
     let browserOpen = false;
+    const startTime = Date.now();
+    const MAX_EXECUTION_TIME = 45000; // 45 seconds max execution time for Vercel
 
     try {
         while (true) {
+            // Check if we are approaching Vercel's timeout
+            if (Date.now() - startTime >= MAX_EXECUTION_TIME) {
+                console.log(`⏱️ Approaching Vercel execution limit. Stopping gracefully after processing ${processedCount} keywords.`);
+                break;
+            }
+
             const pendingKeywords = await KeywordTracking.find({
                 status: "pending",
                 active: true,
-            }).limit(2); // Batch size of 2 to not overwhelm memory
+            }).limit(5); // Increased batch size since scraping is now faster
 
             if (pendingKeywords.length === 0) {
                 console.log(`📭 No more pending keywords. Processed total: ${processedCount}`);
@@ -160,10 +168,16 @@ export async function processAllPendingKeywords() {
             }
 
             for (const tracking of pendingKeywords) {
+                // Double check inside the loop to avoid starting a slow keyword near the end
+                if (Date.now() - startTime >= MAX_EXECUTION_TIME) {
+                    console.log(`⏱️ Execution limit reached during batch processing.`);
+                    break;
+                }
+
                 await processOneKeyword(page, tracking);
                 processedCount++;
-                // انتظار بين كل كلمة والأخرى لتجنب الحظر
-                await page.waitForTimeout(2000 + Math.random() * 2000);
+                // انتظار خفيف بين كل كلمة
+                await page.waitForTimeout(1000 + Math.random() * 1000);
             }
         }
     } catch (error) {
