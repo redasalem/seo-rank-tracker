@@ -23,45 +23,56 @@ export const register = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user (not auto-verified, needs email confirmation)
-        const token = crypto.randomBytes(32).toString("hex");
-
+        // Create new user (auto-verified, no email confirmation needed)
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
-            isEmailVerified: false,
-            isVerified: false,
-            emailVerificationToken: token
+            isEmailVerified: true,
+            isVerified: true
         });
 
-        // Prepare verification link
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-        const verificationUrl = `${frontendUrl}/verify-email/${token}`;
+        // Generate Access Token (short lived)
+        const accessToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+        );
 
-        // Send Email
-        const emailContent = {
-            to: user.email,
-            subject: "Verify Your Email - RankBoost",
-            text: `Welcome to RankBoost! Please verify your email by clicking on the link below:\n\n${verificationUrl}\n\nThis link is valid for 24 hours.`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
-                    <h2 style="color: #1f2937;">Welcome to RankBoost!</h2>
-                    <p style="color: #4b5563;">Thank you for registering. Please click the button below to verify your email address and activate your account:</p>
-                    <div style="margin: 30px 0; text-align: center;">
-                        <a href="${verificationUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Verify Email</a>
-                    </div>
-                    <p style="color: #6b7280; font-size: 14px;">If the button above doesn't work, copy and paste this URL into your browser:</p>
-                    <p style="color: #2563eb; font-size: 14px; word-break: break-all;">${verificationUrl}</p>
-                </div>
-            `
-        };
+        // Generate Refresh Token (long lived)
+        const refreshToken = jwt.sign(
+            { id: user._id },
+            process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
 
-        await sendEmail(emailContent);
+        // Set Access Token in HttpOnly Cookie
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 15 * 60 * 1000 // 15 mins
+        });
+
+        // Set Refresh Token in HttpOnly Cookie
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
 
         res.status(201).json({
             success: true,
-            message: "User registered successfully. A verification email has been sent."
+            message: "User registered successfully.",
+            token: accessToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                plan: user.plan,
+                role: user.role,
+            },
         });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
@@ -90,10 +101,6 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
-        // Check verification
-        if (!user.isEmailVerified && !user.isVerified) {
-            return res.status(403).json({ message: "Please verify your email to login." });
-        }
 
         // Generate Access Token (short lived)
         const accessToken = jwt.sign(
@@ -387,23 +394,4 @@ export const refreshToken = async (req, res) => {
     }
 };
 
-// ─── Verify Email ───────────────────────────────────────────────────────────
-export const verifyEmail = async (req, res) => {
-    try {
-        const { token } = req.params;
-        const user = await User.findOne({ emailVerificationToken: token });
 
-        if (!user) {
-            return res.status(400).json({ message: "Invalid or expired verification token" });
-        }
-
-        user.isEmailVerified = true;
-        user.isVerified = true;
-        user.emailVerificationToken = null;
-        await user.save();
-
-        res.status(200).json({ success: true, message: "Email verified successfully. You can now login." });
-    } catch (error) {
-        res.status(500).json({ message: "Server error" });
-    }
-};

@@ -1,5 +1,5 @@
 import express from "express";
-import { getCurrentUser, login, logout, register, updateProfile, updatePassword, forgotPassword, resetPassword, refreshToken, verifyEmail } from "../controllers/authControllers.js";
+import { getCurrentUser, login, logout, register, updateProfile, updatePassword, forgotPassword, resetPassword, refreshToken } from "../controllers/authControllers.js";
 import auth from "../middleware/auth.js";
 import { validate, registerSchema, loginSchema, updateProfileSchema, updatePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../middleware/validations.js";
 
@@ -23,8 +23,6 @@ authRouter.put('/password', auth, validate(updatePasswordSchema), updatePassword
 authRouter.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword);
 
 authRouter.post('/reset-password/:token', validate(resetPasswordSchema), resetPassword);
-
-authRouter.get('/verify-email/:token', verifyEmail);
 
 export default authRouter;
 

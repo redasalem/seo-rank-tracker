@@ -16,13 +16,14 @@ describe('Auth Endpoints', () => {
         
         expect(res.statusCode).toEqual(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.message).toContain('verification email');
+        expect(res.body.message).toBe('User registered successfully.');
 
         // Check if user is in database
         const userInDb = await User.findOne({ email: testUser.email });
         expect(userInDb).toBeTruthy();
         expect(userInDb.name).toBe(testUser.name);
-        expect(userInDb.isVerified).toBe(false); // Initially false
+        expect(userInDb.isVerified).toBe(true); // Auto-verified
+        expect(res.headers['set-cookie']).toBeDefined(); // Should set token cookie on register
     });
 
     it('should not register user with existing email', async () => {
@@ -38,10 +39,9 @@ describe('Auth Endpoints', () => {
         expect(res.body.message).toBe('User already exists');
     });
 
-    it('should login an existing verified user', async () => {
-        // Register and manually verify
+    it('should login an existing user', async () => {
+        // Register user
         await request(app).post('/api/auth/register').send(testUser);
-        await User.updateOne({ email: testUser.email }, { isVerified: true });
 
         const res = await request(app)
             .post('/api/auth/login')
@@ -60,24 +60,8 @@ describe('Auth Endpoints', () => {
         expect(cookie).toContain('accessToken');
     });
 
-    it('should not login an unverified user', async () => {
-        await request(app).post('/api/auth/register').send(testUser);
-        // Do not verify
-
-        const res = await request(app)
-            .post('/api/auth/login')
-            .send({
-                email: testUser.email,
-                password: testUser.password
-            });
-            
-        expect(res.statusCode).toEqual(403);
-        expect(res.body.message).toContain('verify your email');
-    });
-
     it('should not login with wrong password', async () => {
         await request(app).post('/api/auth/register').send(testUser);
-        await User.updateOne({ email: testUser.email }, { isVerified: true });
 
         const res = await request(app)
             .post('/api/auth/login')
