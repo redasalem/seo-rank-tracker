@@ -59,6 +59,7 @@ export const addKeyword = async (req, res) => {
             status: "pending"
         });
 
+
         try {
             await processSingleKeyword(newEntry._id);
             // Fetch the updated entry to return it
