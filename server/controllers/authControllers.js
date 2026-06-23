@@ -246,12 +246,12 @@ export const forgotPassword = async (req, res) => {
         // Send Email
         const emailContent = {
             to: user.email,
-            subject: "Password Reset Request - Rank Pilot",
+            subject: "Password Reset Request - RankBoost",
             text: `You requested a password reset. Please click on the link below or paste it into your browser to reset your password:\n\n${resetUrl}\n\nThis link is valid for 1 hour. If you did not request this, please ignore this email.`,
             html: `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
                     <h2 style="color: #1f2937;">Password Reset Request</h2>
-                    <p style="color: #4b5563;">You requested a password reset for your Rank Pilot account. Click the button below to set a new password:</p>
+                    <p style="color: #4b5563;">You requested a password reset for your RankBoost account. Click the button below to set a new password:</p>
                     <div style="margin: 30px 0; text-align: center;">
                         <a href="${resetUrl}" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
                     </div>

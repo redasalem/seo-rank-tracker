@@ -247,6 +247,15 @@ export const getDashboardStats = async (req, res) => {
         // Get user for limits
         const user = await User.findById(userId);
 
+        // Dynamically calculate today's completed analyses to ensure dashboard is always accurate
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const todayAnalysisCount = await Analysis.countDocuments({
+            userId,
+            createdAt: { $gte: startOfDay },
+            status: "completed"
+        });
+
         res.status(200).json({
             stats: {
                 totalKeywords: result.totalKeywords,
@@ -268,7 +277,7 @@ export const getDashboardStats = async (req, res) => {
                 recentAnalyses: recentAnalyses,
                 analysisLimit: user ? {
                     plan: user.plan,
-                    used: user.analysisCount || 0,
+                    used: todayAnalysisCount,
                     max: user.plan === 'free' ? 10 : 'unlimited'
                 } : null
             }

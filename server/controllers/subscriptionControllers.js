@@ -41,10 +41,10 @@ export const createCheckoutSession = async (req, res) => {
                     price_data: {
                         currency: "usd",
                         product_data: {
-                            name: "Rank Pilot Pro Plan",
+                            name: "RankBoost Pro Plan",
                             description: "Unlimited SEO analyses and keyword tracking.",
                         },
-                        unit_amount: 1999, // $19.99 per month
+                        unit_amount: 299, // $2.99 per month
                         recurring: {
                             interval: "month",
                         },

@@ -1,4 +1,4 @@
-# 🚀 SEO Rank Tracer (Rank Pilot)
+# 🚀 SEO Rank Tracer (RankBoost)
 
 <div align="center">
 
