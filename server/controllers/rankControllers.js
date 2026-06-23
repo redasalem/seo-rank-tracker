@@ -59,7 +59,6 @@ export const addKeyword = async (req, res) => {
             status: "pending"
         });
 
-        // 🔥 Wait for actual processing to finish before responding
         try {
             await processSingleKeyword(newEntry._id);
             // Fetch the updated entry to return it
@@ -70,7 +69,8 @@ export const addKeyword = async (req, res) => {
             });
         } catch (err) {
             console.error(`⚠️ Keyword scan failed for: ${keyword}`, err);
-            // Still return success for adding, but indicate analysis failed
+            // Set status to failed since it didn't complete
+            await KeywordTracking.findByIdAndUpdate(newEntry._id, { status: "failed" });
             const failedEntry = await KeywordTracking.findById(newEntry._id);
             res.status(201).json({
                 message: "Keyword added, but analysis failed. Try refreshing later.",
@@ -210,8 +210,9 @@ export const getDashboardStats = async (req, res) => {
                     count: { $sum: 1 }
                 }
             },
-            { $sort: { _id: 1 } },
-            { $limit: 7 }
+            { $sort: { _id: -1 } },
+            { $limit: 7 },
+            { $sort: { _id: 1 } }
         ]);
         
         const historyData = historyDataPipeline.map(item => {
@@ -331,6 +332,8 @@ export const refreshKeyword = async (req, res) => {
             res.status(200).json({ message: "Keyword refreshed successfully" });
         } catch (err) {
             console.error(`⚠️ Keyword refresh failed for: ${entry.keyword}`, err);
+            entry.status = "failed";
+            await entry.save();
             res.status(500).json({ message: "Keyword refresh failed" });
         }
         

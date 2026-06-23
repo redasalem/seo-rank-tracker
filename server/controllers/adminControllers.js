@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Keyword from "../models/keywordTracking.js";
+import Analysis from "../models/analysisModel.js";
 
 // ─── Get Dashboard Statistics ───────────────────────────────────────
 export const getStats = async (req, res) => {
@@ -8,6 +9,7 @@ export const getStats = async (req, res) => {
         const proUsers = await User.countDocuments({ plan: "pro" });
         const freeUsers = totalUsers - proUsers;
         const totalKeywords = await Keyword.countDocuments();
+        const totalAnalyses = await Analysis.countDocuments();
 
         // Users registered in the last 30 days
         const thirtyDaysAgo = new Date();
@@ -41,6 +43,7 @@ export const getStats = async (req, res) => {
                 proUsers,
                 freeUsers,
                 totalKeywords,
+                totalAnalyses,
                 newUsersLast30Days,
                 monthlyGrowth: monthlyGrowth.map(item => ({
                     month: `${item._id.year}-${String(item._id.month).padStart(2, "0")}`,
