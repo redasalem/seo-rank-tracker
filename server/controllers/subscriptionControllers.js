@@ -44,7 +44,7 @@ export const createCheckoutSession = async (req, res) => {
                             name: "RankBoost Pro Plan",
                             description: "Unlimited SEO analyses and keyword tracking.",
                         },
-                        unit_amount: 299, // $2.99 per month
+                        unit_amount: 300, // $3.00 per month
                         recurring: {
                             interval: "month",
                         },
