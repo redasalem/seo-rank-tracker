@@ -89,6 +89,7 @@ async function processOneKeyword(page, tracking) {
     try {
         // 1. البحث في جوجل عبر الـ Scraper
         const results = await scrapeGoogle(page, tracking.keyword, tracking.country);
+        console.log(`  📊 Scraper returned ${results.length} results for "${tracking.keyword}" (looking for: ${tracking.domain})`);
 
         // 2. تحليل النتائج
         const { found, competitors } = analyzeResults(results, tracking.domain);
@@ -130,9 +131,12 @@ async function processOneKeyword(page, tracking) {
         }
 
         if (found) {
-            console.log(`  ✅ Found at #${found.position} (page ${found.page})`);
+            console.log(`  ✅ Found "${tracking.domain}" at #${found.position} (page ${found.page})`);
         } else {
-            console.log(`  ❌ Not found in top 50 results`);
+            console.log(`  ❌ "${tracking.domain}" not found in top ${results.length} results`);
+            if (results.length > 0) {
+                console.log(`  📋 Top 3 results: ${results.slice(0, 3).map(r => r.url).join(", ")}`);
+            }
         }
     } catch (error) {
         console.error(`  ⚠️ Error: "${tracking.keyword}":`, error.message);
