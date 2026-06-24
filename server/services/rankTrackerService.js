@@ -14,8 +14,12 @@ export async function createBrowser() {
     console.log(`🌐 Browserbase session created: ${session.id}`);
 
     const browser = await chromium.connectOverCDP(session.connectUrl);
-    const context = browser.contexts()[0];
-    const page = context.pages()[0];
+    
+    // Set realistic Desktop User-Agent when creating the page
+    const context = await browser.newContext({
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    });
+    const page = await context.newPage();
 
     return { browser, page, sessionId: session.id };
 }
@@ -74,7 +78,7 @@ export async function scrapeGoogle(page, keyword, country = "us") {
             console.log("  🚫 Google CAPTCHA detected! The IP might be blocked.");
         }
         
-        return [];
+        throw new Error("Google CAPTCHA or block detected");
     }
 
     console.log(`  ✅ Search results container found: ${searchSelector}`);
