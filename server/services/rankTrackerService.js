@@ -12,10 +12,7 @@ export async function createBrowser() {
 
     const session = await bb.sessions.create({
         projectId: process.env.BROWSERBASE_PROJECT_ID,
-        proxies: true,
-        browserSettings: {
-            advancedStealth: true
-        }
+        proxies: true
     });
     console.log(`🌐 Browserbase session created: ${session.id}`);
 
