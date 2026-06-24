@@ -87,6 +87,30 @@ export async function scrapeGoogle(page, keyword, country = "us") {
     const results = await page.evaluate(() => {
         const items = [];
         
+        // 1. Check for Rich Snippets and Profile Cards
+        const featuredSelectors = [
+            ".kp-blk a[href]",
+            ".xpdopen a[href]",
+            "[data-attrid] a[href]",
+            ".ULSxyf a[href]",
+            "g-card a[href]"
+        ];
+        
+        for (const selector of featuredSelectors) {
+            const links = document.querySelectorAll(selector);
+            links.forEach((linkEl) => {
+                const url = linkEl.href;
+                if (url && !url.includes("google.com/search") && !url.includes("google.com/url") && url.startsWith("http")) {
+                    items.push({
+                        url,
+                        snippet: "Featured/Profile Card Result",
+                        page: 1,
+                        isFeatured: true
+                    });
+                }
+            });
+        }
+        
         // Try multiple selectors for Google's organic results (Google changes HTML frequently)
         const selectors = [
             "#search .g",           // Traditional selector
@@ -154,8 +178,14 @@ export async function scrapeGoogle(page, keyword, country = "us") {
     console.log(`  📊 Found ${results.length} organic results`);
 
     // ترقيم النتائج
-    return results.map((result, index) => ({
-        ...result,
-        position: index + 1,
-    }));
+    let organicPosition = 1;
+    return results.map((result) => {
+        if (result.isFeatured) {
+            return { ...result, position: 1 };
+        }
+        return {
+            ...result,
+            position: organicPosition++,
+        };
+    });
 }
