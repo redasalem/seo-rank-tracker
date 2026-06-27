@@ -11,7 +11,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     const smtpPort = process.env.SMTP_PORT || 587;
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
-    const smtpSender = process.env.SMTP_SENDER || '"RankBoost" <noreply@rankpilot.com>';
+    const smtpSender = process.env.SMTP_SENDER || '"RankBoost" <noreply@rankboost.com>';
 
     console.log(`[Email Service] Attempting to send email to: ${to}`);
 

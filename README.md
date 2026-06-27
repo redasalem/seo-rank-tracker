@@ -1,4 +1,4 @@
-# 🚀 SEO Rank Tracer (RankBoost)
+# 🚀 RankBoost
 
 <div align="center">
 
