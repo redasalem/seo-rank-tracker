@@ -91,6 +91,10 @@ async function processOneKeyword(page, tracking) {
         const results = await scrapeGoogle(page, tracking.keyword, tracking.country);
         console.log(`  📊 Scraper returned ${results.length} results for "${tracking.keyword}" (looking for: ${tracking.domain})`);
 
+        if (results.length === 0) {
+            throw new Error("No results returned - possible block");
+        }
+
         // 2. تحليل النتائج
         const { found, competitors } = analyzeResults(results, tracking.domain);
 

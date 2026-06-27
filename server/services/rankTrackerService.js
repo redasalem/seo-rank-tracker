@@ -14,8 +14,12 @@ export async function createBrowser() {
     console.log(`🌐 Browserbase session created: ${session.id}`);
 
     const browser = await chromium.connectOverCDP(session.connectUrl);
-    const context = browser.contexts()[0];
-    const page = context.pages()[0];
+    
+    // Set realistic Desktop User-Agent when creating the page
+    const context = await browser.newContext({
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    });
+    const page = await context.newPage();
 
     return { browser, page, sessionId: session.id };
 }
@@ -55,6 +59,9 @@ export async function scrapeGoogle(page, keyword, country = "us") {
     // التعامل مع صفحة موافقة الـ Cookie (EU Consent)
     await handleGoogleConsent(page);
 
+    const pageHtml = await page.content();
+    console.log(`  📄 Page HTML (First 3000 chars): \n${pageHtml.substring(0, 3000)}`);
+
     // Wait for search results with multiple fallback selectors
     const searchSelector = await Promise.race([
         page.waitForSelector("#search", { timeout: 15000 }).then(() => "#search"),
@@ -74,14 +81,40 @@ export async function scrapeGoogle(page, keyword, country = "us") {
             console.log("  🚫 Google CAPTCHA detected! The IP might be blocked.");
         }
         
-        return [];
+        throw new Error("Google CAPTCHA or block detected");
     }
 
     console.log(`  ✅ Search results container found: ${searchSelector}`);
 
     // استخراج نتائج البحث العضوية من الصفحة - استخدام selectors متعددة
-    const results = await page.evaluate(() => {
+    const { items: results, debugLogs } = await page.evaluate(() => {
         const items = [];
+        const debugLogs = [];
+        
+        // 1. Check for Rich Snippets and Profile Cards
+        const featuredSelectors = [
+            ".kp-blk a[href]",
+            ".xpdopen a[href]",
+            "[data-attrid] a[href]",
+            ".ULSxyf a[href]",
+            "g-card a[href]"
+        ];
+        
+        for (const selector of featuredSelectors) {
+            const links = document.querySelectorAll(selector);
+            debugLogs.push(`Featured Selector '${selector}' found ${links.length} links`);
+            links.forEach((linkEl) => {
+                const url = linkEl.href;
+                if (url && !url.includes("google.com/search") && !url.includes("google.com/url") && url.startsWith("http")) {
+                    items.push({
+                        url,
+                        snippet: "Featured/Profile Card Result",
+                        page: 1,
+                        isFeatured: true
+                    });
+                }
+            });
+        }
         
         // Try multiple selectors for Google's organic results (Google changes HTML frequently)
         const selectors = [
@@ -94,6 +127,7 @@ export async function scrapeGoogle(page, keyword, country = "us") {
         let searchResults = null;
         for (const selector of selectors) {
             const found = document.querySelectorAll(selector);
+            debugLogs.push(`Organic Selector '${selector}' found ${found.length} containers`);
             if (found.length > 0) {
                 searchResults = found;
                 break;
@@ -103,6 +137,7 @@ export async function scrapeGoogle(page, keyword, country = "us") {
         if (!searchResults || searchResults.length === 0) {
             // Fallback: try to find any link within the main results area
             const allLinks = document.querySelectorAll("#search a[href], #rso a[href], #center_col a[href]");
+            debugLogs.push(`Fallback Selector found ${allLinks.length} links`);
             const seenUrls = new Set();
             
             allLinks.forEach((linkEl) => {
@@ -125,7 +160,7 @@ export async function scrapeGoogle(page, keyword, country = "us") {
                 }
             });
             
-            return items;
+            return { items, debugLogs };
         }
 
         searchResults.forEach((el) => {
@@ -144,14 +179,22 @@ export async function scrapeGoogle(page, keyword, country = "us") {
             }
         });
 
-        return items;
+        return { items, debugLogs };
     });
 
+    console.log(`  📝 Selector Debug Logs:\n${debugLogs.join('\n')}`);
+    console.log(`  📊 Full Results Array Before Return:\n`, JSON.stringify(results, null, 2));
     console.log(`  📊 Found ${results.length} organic results`);
 
     // ترقيم النتائج
-    return results.map((result, index) => ({
-        ...result,
-        position: index + 1,
-    }));
+    let organicPosition = 1;
+    return results.map((result) => {
+        if (result.isFeatured) {
+            return { ...result, position: 1 };
+        }
+        return {
+            ...result,
+            position: organicPosition++,
+        };
+    });
 }
