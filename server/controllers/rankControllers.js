@@ -341,7 +341,7 @@ export const refreshKeyword = async (req, res) => {
             await entry.save().catch(saveErr => {
                 console.error(`🚨 Failed to save failed status:`, saveErr);
             });
-            res.status(200).json({ 
+            res.status(500).json({ 
                 message: "Keyword refresh failed. It will be retried on the next daily run."
             });
         }
