@@ -25,6 +25,7 @@ export const startAnalysis = async (req, res) => {
         
         if (lastAnalysisDate !== today) {
             user.analysisCount = 0;
+            await user.save();
         }
 
         // Check limits
@@ -57,23 +58,21 @@ export const startAnalysis = async (req, res) => {
             status: "processing"
         });
 
-        // 🔥 Wait for actual analysis to finish
-        try {
-            await runFullSEOAnalysis(newAnalysis._id);
+        // Return 202 Accepted immediately
+        res.status(202).json({
+            message: "Analysis queued in the background",
+            analysisId: newAnalysis._id
+        });
 
+        // Run heavy task in the background without await
+        runFullSEOAnalysis(newAnalysis._id).then(async () => {
             // Increment count only upon successful analysis
             user.analysisCount += 1;
             user.lastAnalysisDate = new Date();
             await user.save();
-
-            res.status(201).json({
-                message: "Analysis completed",
-                analysisId: newAnalysis._id
-            });
-        } catch (err) {
-            console.error(`⚠️ SEO scan failed for: ${url}`, err);
-            res.status(500).json({ message: "Analysis failed: " + (err.message || err.toString()) });
-        }
+        }).catch(err => {
+            console.error(`🚨 Background SEO scan failed for: ${url}`, err);
+        });
 
     } catch (error) {
         console.error("Error starting analysis:", error);

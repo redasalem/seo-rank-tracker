@@ -21,19 +21,22 @@ cronRouter.get("/daily", async (req, res) => {
     try {
         // 1. Change all active keywords to pending
         const result = await KeywordTracking.updateMany(
-            { active: true, status: "success" },
+            { active: true },
             { status: "pending" }
         );
         console.log(`📋 [VERCEL CRON] ${result.modifiedCount} keyword(s) set to pending`);
 
-        // 2. Process the keywords (max 2 at a time)
-        await processAllPendingKeywords();
-        console.log("✅ [VERCEL CRON] Periodic rank update completed!");
-
-        // 3. We return the response AFTER it finishes, but within 60s
-        res.status(200).json({ 
-            message: "Cron job executed successfully", 
+        // Return 202 Accepted immediately
+        res.status(202).json({ 
+            message: "Cron job triggered and queued successfully", 
             keywordsMarkedPending: result.modifiedCount 
+        });
+
+        // Run in background without await
+        processAllPendingKeywords().then(() => {
+            console.log("✅ [VERCEL CRON] Background periodic rank update completed!");
+        }).catch(err => {
+            console.error("🚨 [VERCEL CRON] Background task failed:", err);
         });
 
     } catch (error) {

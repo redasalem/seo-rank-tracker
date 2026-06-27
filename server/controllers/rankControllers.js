@@ -60,24 +60,20 @@ export const addKeyword = async (req, res) => {
         });
 
 
-        try {
-            await processSingleKeyword(newEntry._id);
-            // Fetch the updated entry to return it
-            const updatedEntry = await KeywordTracking.findById(newEntry._id);
-            res.status(201).json({
-                message: "Keyword added and analyzed successfully",
-                tracking: updatedEntry
-            });
-        } catch (err) {
-            console.error(`⚠️ Keyword scan failed for: ${keyword}`, err);
+        // Return 202 Accepted immediately
+        res.status(202).json({
+            message: "Keyword added and analysis queued in the background",
+            tracking: newEntry
+        });
+
+        // Run heavy task in the background without await
+        processSingleKeyword(newEntry._id).catch(err => {
+            console.error(`🚨 Background keyword scan failed for: ${keyword}`, err);
             // Set status to failed since it didn't complete
-            await KeywordTracking.findByIdAndUpdate(newEntry._id, { status: "failed" });
-            const failedEntry = await KeywordTracking.findById(newEntry._id);
-            res.status(201).json({
-                message: "Keyword added, but analysis failed. Try refreshing later.",
-                tracking: failedEntry
+            KeywordTracking.findByIdAndUpdate(newEntry._id, { status: "failed" }).catch(dbErr => {
+                console.error(`🚨 Failed to update failed status in database:`, dbErr);
             });
-        }
+        });
 
     } catch (error) {
         console.error("Error adding keyword:", error);
@@ -327,16 +323,17 @@ export const refreshKeyword = async (req, res) => {
         entry.status = "pending";
         await entry.save();
 
-        // 🔥 Wait for actual processing to finish before responding
-        try {
-            await processSingleKeyword(entry._id);
-            res.status(200).json({ message: "Keyword refreshed successfully" });
-        } catch (err) {
-            console.error(`⚠️ Keyword refresh failed for: ${entry.keyword}`, err);
+        // Return 202 Accepted immediately
+        res.status(202).json({ message: "Keyword refresh queued successfully" });
+
+        // Run heavy task in the background without await
+        processSingleKeyword(entry._id).catch(err => {
+            console.error(`🚨 Background keyword refresh failed for: ${entry.keyword}`, err);
             entry.status = "failed";
-            await entry.save();
-            res.status(500).json({ message: "Keyword refresh failed" });
-        }
+            entry.save().catch(saveErr => {
+                console.error(`🚨 Failed to save failed status for keyword: ${entry.keyword}`, saveErr);
+            });
+        });
         
     } catch (error) {
         console.error("Error refreshing keyword:", error);
