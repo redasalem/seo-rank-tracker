@@ -107,7 +107,7 @@ export const stripeWebhook = async (req, res) => {
 
                     if (user && user.email) {
                         const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-                        sendInvoiceEmail(user.email, user.name, "$19.99", date, "Pro").catch(err => {
+                        sendInvoiceEmail(user.email, user.name, "$3.00", date, "Pro").catch(err => {
                             console.error("Failed to send invoice email:", err);
                         });
                     }
