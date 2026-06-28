@@ -3,7 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { sendEmail } from "../utils/emailService.js";
-
+import KeywordTracking from "../models/keywordTracking.js";
+import Analysis from "../models/analysisModel.js";
+import Notification from "../models/Notification.js";
 // ─── Register ────────────────────────────────────────────────────────────────
 export const register = async (req, res) => {
     try {
@@ -395,3 +397,44 @@ export const refreshToken = async (req, res) => {
 };
 
 
+// ─── Delete Account ─────────────────────────────────────────────────────────
+export const deleteAccount = async (req, res) => {
+    try {
+        const { password } = req.body;
+        const userId = req.user.id;
+
+        if (!password) {
+            return res.status(400).json({ message: "Password is required to delete account" });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ message: "Incorrect password" });
+        }
+
+        // Delete all user data
+        await Promise.all([
+            User.findByIdAndDelete(userId),
+            KeywordTracking.deleteMany({ userId }),
+            Analysis.deleteMany({ userId }),
+            Notification.deleteMany({ userId })
+        ]);
+
+        // Clear refresh token cookie
+        res.cookie("refreshToken", "", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            expires: new Date(0)
+        });
+
+        res.status(200).json({ message: "Account deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
