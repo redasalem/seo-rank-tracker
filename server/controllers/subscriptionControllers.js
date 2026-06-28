@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import User from "../models/User.js";
+import { sendInvoiceEmail } from "../utils/emailService.js";
 
 let stripe;
 if (process.env.STRIPE_SECRET_KEY) {
@@ -97,12 +98,19 @@ export const stripeWebhook = async (req, res) => {
                 const subscriptionId = session.subscription;
 
                 if (userId) {
-                    await User.findByIdAndUpdate(userId, {
+                    const user = await User.findByIdAndUpdate(userId, {
                         plan: "pro",
                         stripeCustomerId: customerId,
                         stripeSubscriptionId: subscriptionId,
-                    });
+                    }, { new: true });
                     console.log(`✅ User ${userId} upgraded to PRO`);
+
+                    if (user && user.email) {
+                        const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+                        sendInvoiceEmail(user.email, user.name, "$19.99", date, "Pro").catch(err => {
+                            console.error("Failed to send invoice email:", err);
+                        });
+                    }
                 }
                 break;
             }
