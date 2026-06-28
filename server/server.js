@@ -86,6 +86,16 @@ app.use("/api/notifications", notificationRouter);
 app.use("/api/subscription", subscriptionRouter);
 app.use("/api/admin", adminRouter);
 
+app.use((err, req, res, next) => {
+  console.error(`[Global Error] ${req.method} ${req.url}:`, err.message);
+  
+  const statusCode = err.statusCode || err.status || 500;
+  
+  res.status(statusCode).json({
+    message: err.message || "Internal Server Error",
+    ...(process.env.NODE_ENV === "development" && { stack: err.stack })
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 
