@@ -311,13 +311,10 @@ export const forgotPassword = async (req, res) => {
 
         const mailResult = await sendEmail(emailContent);
 
-        // Return a response including the token in development mode to ease testing
+        // Return a response
         const responseData = {
-            message: "Password reset link sent to your email"
+            message: "If this email exists, a reset link has been sent."
         };
-        if (process.env.NODE_ENV !== "production" || mailResult.loggedToConsole) {
-            responseData.resetUrl = resetUrl; // helps frontend/developer test locally
-        }
 
         res.status(200).json(responseData);
     } catch (error) {

@@ -87,6 +87,8 @@ const analysisSchema = new mongoose.Schema({
     issues: [issueSchema]
 }, { timestamps: true });
 
+analysisSchema.index({ userId: 1, createdAt: -1 });
+
 const Analysis = mongoose.model("Analysis", analysisSchema);
 
 export default Analysis;

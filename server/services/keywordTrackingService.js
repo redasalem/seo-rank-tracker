@@ -189,7 +189,15 @@ export async function processAllPendingKeywords() {
                     break;
                 }
 
-                await processOneKeyword(page, tracking);
+                const SINGLE_KEYWORD_TIMEOUT = 45000; // 45 seconds
+                await Promise.race([
+                    processOneKeyword(page, tracking),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error("Keyword timeout")), SINGLE_KEYWORD_TIMEOUT)
+                    )
+                ]).catch(err => {
+                    console.error(`🚨 Timeout for keyword ${tracking.keyword}:`, err.message);
+                });
                 processedCount++;
                 // انتظار خفيف بين كل كلمة
                 await page.waitForTimeout(1000 + Math.random() * 1000);

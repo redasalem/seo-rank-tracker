@@ -60,7 +60,6 @@ export async function scrapeGoogle(page, keyword, country = "us") {
     await handleGoogleConsent(page);
 
     const pageHtml = await page.content();
-    console.log(`  📄 Page HTML (First 3000 chars): \n${pageHtml.substring(0, 3000)}`);
 
     // Wait for search results with multiple fallback selectors
     const searchSelector = await Promise.race([
@@ -182,8 +181,7 @@ export async function scrapeGoogle(page, keyword, country = "us") {
         return { items, debugLogs };
     });
 
-    console.log(`  📝 Selector Debug Logs:\n${debugLogs.join('\n')}`);
-    console.log(`  📊 Full Results Array Before Return:\n`, JSON.stringify(results, null, 2));
+
     console.log(`  📊 Found ${results.length} organic results`);
 
     // ترقيم النتائج

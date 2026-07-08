@@ -53,13 +53,23 @@ const authLimiter = rateLimit({
     legacyHeaders: false,
 });
 
+const scrapingLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 5,
+    message: { message: "Too many requests. Please wait before trying again." }
+});
+
 // Apply rate limiting to all API requests
 app.use("/api", limiter);
 
-// Apply stricter rate limiting to auth endpoints
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
+
+// Apply stricter rate limiting to scraping endpoints
+app.use("/api/analysis/start", scrapingLimiter);
+app.use("/api/rank/add", scrapingLimiter);
+app.use("/api/rank/:id/refresh", scrapingLimiter);
 
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
 import { stripeWebhook } from "./controllers/subscriptionControllers.js";

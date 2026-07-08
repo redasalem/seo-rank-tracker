@@ -127,6 +127,18 @@ export const stripeWebhook = async (req, res) => {
                 break;
             }
 
+            case "invoice.payment_failed": {
+                const invoice = event.data.object;
+                const customerId = invoice.customer;
+
+                await User.findOneAndUpdate(
+                    { stripeCustomerId: customerId },
+                    { plan: "free", stripeSubscriptionId: null }
+                );
+                console.log(`❌ Payment failed for ${customerId}. Downgraded to FREE`);
+                break;
+            }
+
             default:
                 console.log(`Unhandled event type ${event.type}`);
         }
