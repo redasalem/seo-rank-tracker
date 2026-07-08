@@ -11,6 +11,8 @@ import analysisRouter from "./routes/analysisRoutes.js";
 import cronRouter from "./routes/cronRoutes.js";
 import notificationRouter from "./routes/notificationRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
+import healthRouter from "./routes/healthRoutes.js";
+import logger from "./utils/logger.js";
 import { startCronJobs } from "./jobs/scheduler.js";
 
 if (process.env.NODE_ENV !== 'test') {
@@ -81,6 +83,12 @@ app.post("/api/subscription/webhook", express.raw({ type: "application/json" }),
 app.use(express.json());
 app.use(cookieParser());
 
+// Request logging middleware
+app.use((req, res, next) => {
+    logger.info(`[Request] ${req.method} ${req.url}`);
+    next();
+});
+
 
 app.get("/",(req,res)=>{
     res.send("server is running");
@@ -95,9 +103,10 @@ app.use("/api/cron", cronRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/subscription", subscriptionRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/health", healthRouter);
 
 app.use((err, req, res, next) => {
-  console.error(`[Global Error] ${req.method} ${req.url}:`, err.message);
+  logger.error(`[Global Error] ${req.method} ${req.url}: ${err.message}`, { stack: err.stack });
   
   const statusCode = err.statusCode || err.status || 500;
   
@@ -111,7 +120,7 @@ const PORT = process.env.PORT || 5000;
 
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
-        console.log(`Server Is running on port ${PORT}`);
+        logger.info(`Server Is running on port ${PORT}`);
         
         // Disable node-cron if running on Vercel (Vercel uses its own cron via /api/cron)
         if (!process.env.VERCEL) {
