@@ -29,9 +29,9 @@ export const startAnalysis = async (req, res) => {
         }
 
         // Check limits
-        if (user.plan === "free" && user.analysisCount >= 10) {
+        if (user.plan === "free" && user.analysisCount >= 3) {
             return res.status(403).json({ 
-                message: "You have reached your daily limit of 10 analyses on the Free plan. Please upgrade to Pro."
+                message: "You have reached your daily limit of 3 analyses on the Free plan. Please upgrade to Pro."
             });
         }
 
@@ -48,7 +48,10 @@ export const startAnalysis = async (req, res) => {
             return res.status(400).json({ message: "Invalid URL format" });
         }
 
-
+        // Increment count BEFORE starting analysis so limit is enforced on next request
+        user.analysisCount += 1;
+        user.lastAnalysisDate = new Date();
+        await user.save();
 
         // Create a new analysis record in 'processing' state
         const newAnalysis = await Analysis.create({
@@ -65,12 +68,7 @@ export const startAnalysis = async (req, res) => {
         });
 
         // Run heavy task in the background without await
-        runFullSEOAnalysis(newAnalysis._id).then(async () => {
-            // Increment count only upon successful analysis
-            user.analysisCount += 1;
-            user.lastAnalysisDate = new Date();
-            await user.save();
-        }).catch(err => {
+        runFullSEOAnalysis(newAnalysis._id).catch(err => {
             console.error(`🚨 Background SEO scan failed for: ${url}`, err);
         });
 
