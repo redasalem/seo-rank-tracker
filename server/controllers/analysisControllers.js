@@ -61,15 +61,16 @@ export const startAnalysis = async (req, res) => {
             status: "processing"
         });
 
-        // Return 202 Accepted immediately
-        res.status(202).json({
-            message: "Analysis queued in the background",
-            analysisId: newAnalysis._id
-        });
-
-        // Run heavy task in the background without await
-        runFullSEOAnalysis(newAnalysis._id).catch(err => {
+        // Run task before sending response because Serverless kills background tasks
+        try {
+            await runFullSEOAnalysis(newAnalysis._id);
+        } catch (err) {
             console.error(`🚨 Background SEO scan failed for: ${url}`, err);
+        }
+
+        res.status(200).json({
+            message: "Analysis completed successfully",
+            analysisId: newAnalysis._id
         });
 
     } catch (error) {

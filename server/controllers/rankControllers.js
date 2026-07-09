@@ -60,18 +60,19 @@ export const addKeyword = async (req, res) => {
         });
 
 
-        // Return 202 Accepted immediately
-        res.status(202).json({
-            message: "Keyword added and queued for ranking",
-            tracking: newEntry
-        });
-
-        // Run heavy task in the background without await
-        processSingleKeyword(newEntry._id).catch(async (scanErr) => {
+        // Run task before sending response because Serverless kills background tasks
+        try {
+            await processSingleKeyword(newEntry._id);
+        } catch (scanErr) {
             console.error(`🚨 Keyword scan failed for: ${keyword}`, scanErr);
-            await KeywordTracking.findByIdAndUpdate(newEntry._id, { status: "failed" }).catch(dbErr => {
-                console.error(`🚨 Failed to update failed status in database:`, dbErr);
-            });
+            await KeywordTracking.findByIdAndUpdate(newEntry._id, { status: "failed" });
+        }
+
+        const updatedEntry = await KeywordTracking.findById(newEntry._id);
+
+        res.status(201).json({
+            message: "Keyword added and ranked successfully",
+            tracking: updatedEntry
         });
 
     } catch (error) {
@@ -322,19 +323,20 @@ export const refreshKeyword = async (req, res) => {
         entry.status = "pending";
         await entry.save();
 
-        // Return 202 Accepted immediately
-        res.status(202).json({ 
-            message: "Keyword refresh queued in the background",
-            keyword: entry
-        });
-
-        // Run heavy task in the background without await
-        processSingleKeyword(entry._id).catch(async (err) => {
+        // Run task before sending response because Serverless kills background tasks
+        try {
+            await processSingleKeyword(entry._id);
+        } catch (err) {
             console.error(`🚨 Keyword refresh failed for: ${entry.keyword}`, err);
             entry.status = "failed";
-            await entry.save().catch(saveErr => {
-                console.error(`🚨 Failed to save failed status:`, saveErr);
-            });
+            await entry.save();
+        }
+
+        const updatedEntry = await KeywordTracking.findById(entry._id);
+
+        res.status(200).json({ 
+            message: "Keyword refreshed successfully",
+            keyword: updatedEntry
         });
         
     } catch (error) {
