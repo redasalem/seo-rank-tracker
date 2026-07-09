@@ -146,6 +146,7 @@ async function processOneKeyword(page, tracking) {
         console.error(`  ⚠️ Error: "${tracking.keyword}":`, error.message);
         tracking.status = "failed";
         await tracking.save();
+        throw error;
     }
 }
 
