@@ -10,10 +10,8 @@ export async function createBrowser() {
         projectId: process.env.BROWSERBASE_PROJECT_ID
     });
 
-    const session = await bb.sessions.create({
-        proxies: true
-    });
-    console.log(`🌐 Browserbase session created: ${session.id} (with proxies)`);
+    const session = await bb.sessions.create();
+    console.log(`🌐 Browserbase session created: ${session.id}`);
 
     const browser = await chromium.connectOverCDP(session.connectUrl);
     
