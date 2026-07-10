@@ -1,8 +1,7 @@
-import { chromium } from "playwright-core";
-import Browserbase from "@browserbasehq/sdk";
 import Analysis from "../models/analysisModel.js";
 import https from "https";
 import axios from "axios";
+import * as cheerio from "cheerio";
 
 // ─── فحص شهادة الأمان (SSL) ────────────────────────────────────────────────
 async function checkSSL(url) {
@@ -69,122 +68,130 @@ async function checkFiles(url) {
 }
 
 // ─── استخراج البيانات الأساسية من الصفحة ─────────────────────────────────
-async function extractPageData(page) {
-    return await page.evaluate(() => {
-        const getMeta = (name) => document.querySelector(`meta[name="${name}"]`)?.content || document.querySelector(`meta[property="${name}"]`)?.content || "";
-        
-        // 1. Meta Data
-        const metaData = {
-            title: document.title || "",
-            description: getMeta("description"),
-            canonical: document.querySelector('link[rel="canonical"]')?.href || "",
-            robots: getMeta("robots"),
-            ogTitle: getMeta("og:title"),
-            ogDescription: getMeta("og:description"),
-            ogImage: getMeta("og:image"),
-            twitterCard: getMeta("twitter:card"),
-            viewport: getMeta("viewport"),
-            charset: document.characterSet || ""
-        };
+function extractPageData($, url) {
+    const getMeta = (name) => $(`meta[name="${name}"]`).attr("content") || $(`meta[property="${name}"]`).attr("content") || "";
+    
+    // 1. Meta Data
+    const metaData = {
+        title: $("title").text() || "",
+        description: getMeta("description"),
+        canonical: $('link[rel="canonical"]').attr("href") || "",
+        robots: getMeta("robots"),
+        ogTitle: getMeta("og:title"),
+        ogDescription: getMeta("og:description"),
+        ogImage: getMeta("og:image"),
+        twitterCard: getMeta("twitter:card"),
+        viewport: getMeta("viewport"),
+        charset: $("meta[charset]").attr("charset") || ""
+    };
 
-        // 2. Headings
-        const headings = {
-            h1: document.querySelectorAll("h1").length,
-            h2: document.querySelectorAll("h2").length,
-            h3: document.querySelectorAll("h3").length,
-            h4: document.querySelectorAll("h4").length,
-            h5: document.querySelectorAll("h5").length,
-            h6: document.querySelectorAll("h6").length,
-            h1Texts: Array.from(document.querySelectorAll("h1")).map(h => h.textContent.trim())
-        };
+    // 2. Headings
+    const h1Texts = [];
+    $("h1").each((_, el) => h1Texts.push($(el).text().trim()));
+    
+    const headings = {
+        h1: $("h1").length,
+        h2: $("h2").length,
+        h3: $("h3").length,
+        h4: $("h4").length,
+        h5: $("h5").length,
+        h6: $("h6").length,
+        h1Texts
+    };
 
-        // 3. Links
-        const allLinks = Array.from(document.querySelectorAll("a[href]"));
-        const currentDomain = window.location.hostname;
-        let internal = 0;
-        let external = 0;
+    // 3. Links
+    const allLinks = $("a[href]");
+    let currentDomain = "";
+    try {
+        currentDomain = new URL(url).hostname;
+    } catch(e) {}
+    
+    let internal = 0;
+    let external = 0;
 
-        allLinks.forEach(link => {
-            try {
-                const url = new URL(link.href);
-                if (url.hostname === currentDomain) internal++;
-                else external++;
-            } catch (e) {
-                // Ignore invalid links
-            }
-        });
-
-        // 4. Images
-        const allImages = Array.from(document.querySelectorAll("img"));
-        let withAlt = 0;
-        let missingAlt = 0;
-
-        allImages.forEach(img => {
-            if (img.hasAttribute("alt") && img.getAttribute("alt").trim() !== "") {
-                withAlt++;
-            } else {
-                missingAlt++;
-            }
-        });
-
-        // 5. Text content for Word Count
-        const bodyText = document.body.innerText || "";
-        const words = bodyText.split(/\s+/).filter(word => word.length > 2);
-        const wordCount = words.length;
-
-        // Basic Keyword Density (Top 10 words)
-        const wordMap = {};
-        words.forEach(w => {
-            const word = w.toLowerCase().replace(/[^a-z0-9]/g, "");
-            if (word.length > 3) {
-                wordMap[word] = (wordMap[word] || 0) + 1;
-            }
-        });
-
-        const keywords = Object.entries(wordMap)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([word, count]) => ({
-                word,
-                count,
-                density: parseFloat(((count / Math.max(1, wordCount)) * 100).toFixed(2))
-            }));
-
-        const schemaScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
-        const schemaTypes = [];
-        
-        const addType = (type) => {
-            if (Array.isArray(type)) {
-                type.forEach(t => { if (typeof t === 'string') schemaTypes.push(t) });
-            } else if (typeof type === 'string') {
-                schemaTypes.push(type);
-            }
-        };
-
-        schemaScripts.forEach(script => {
-            try {
-                const json = JSON.parse(script.textContent || "{}");
-                if (Array.isArray(json)) {
-                    json.forEach(item => { if (item['@type']) addType(item['@type']) });
-                } else if (json['@type']) {
-                    addType(json['@type']);
-                } else if (json['@graph']) {
-                    json['@graph'].forEach(item => { if (item['@type']) addType(item['@type']) });
-                }
-            } catch(e) {}
-        });
-        const uniqueSchemaTypes = [...new Set(schemaTypes)];
-
-        return {
-            metaData,
-            headings,
-            links: { total: allLinks.length, internal, external },
-            images: { total: allImages.length, withAlt, missingAlt },
-            wordCount,
-            keywords,
-            schemaTypes: uniqueSchemaTypes
-        };
+    allLinks.each((_, link) => {
+        try {
+            const href = $(link).attr("href");
+            if (!href) return;
+            const linkUrl = new URL(href, url);
+            if (linkUrl.hostname === currentDomain) internal++;
+            else external++;
+        } catch (e) {
+            // Ignore invalid links
+        }
     });
+
+    // 4. Images
+    const allImages = $("img");
+    let withAlt = 0;
+    let missingAlt = 0;
+
+    allImages.each((_, img) => {
+        const alt = $(img).attr("alt");
+        if (alt !== undefined && alt.trim() !== "") {
+            withAlt++;
+        } else {
+            missingAlt++;
+        }
+    });
+
+    // 5. Text content for Word Count
+    const bodyText = $("body").text() || "";
+    const words = bodyText.split(/\s+/).filter(word => word.length > 2);
+    const wordCount = words.length;
+
+    // Basic Keyword Density (Top 10 words)
+    const wordMap = {};
+    words.forEach(w => {
+        const word = w.toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (word.length > 3) {
+            wordMap[word] = (wordMap[word] || 0) + 1;
+        }
+    });
+
+    const keywords = Object.entries(wordMap)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([word, count]) => ({
+            word,
+            count,
+            density: parseFloat(((count / Math.max(1, wordCount)) * 100).toFixed(2))
+        }));
+
+    const schemaScripts = $('script[type="application/ld+json"]');
+    const schemaTypes = [];
+    
+    const addType = (type) => {
+        if (Array.isArray(type)) {
+            type.forEach(t => { if (typeof t === 'string') schemaTypes.push(t) });
+        } else if (typeof type === 'string') {
+            schemaTypes.push(type);
+        }
+    };
+
+    schemaScripts.each((_, script) => {
+        try {
+            const json = JSON.parse($(script).html() || "{}");
+            if (Array.isArray(json)) {
+                json.forEach(item => { if (item['@type']) addType(item['@type']) });
+            } else if (json['@type']) {
+                addType(json['@type']);
+            } else if (json['@graph']) {
+                json['@graph'].forEach(item => { if (item['@type']) addType(item['@type']) });
+            }
+        } catch(e) {}
+    });
+    const uniqueSchemaTypes = [...new Set(schemaTypes)];
+
+    return {
+        metaData,
+        headings,
+        links: { total: allLinks.length, internal, external },
+        images: { total: allImages.length, withAlt, missingAlt },
+        wordCount,
+        keywords,
+        schemaTypes: uniqueSchemaTypes
+    };
 }
 
 // ─── تحليل البيانات واكتشاف الأخطاء (Rule-based Engine) ───────────────────
@@ -287,49 +294,31 @@ export async function runFullSEOAnalysis(analysisId) {
 
     console.log(`🚀 Starting SEO Audit for: ${analysis.url}`);
 
-    let session, browser, page;
-
     try {
-        const bb = new Browserbase({ 
-            apiKey: process.env.BROWSERBASE_API_KEY,
-            projectId: process.env.BROWSERBASE_PROJECT_ID
-        });
-        session = await bb.sessions.create();
-        browser = await chromium.connectOverCDP(session.connectUrl);
-        const context = browser.contexts()[0];
-        page = context.pages()[0];
-
-        // Block heavy resources to speed up page load
-        await page.route("**/*", (route) => {
-            const type = route.request().resourceType();
-            if (["image", "stylesheet", "font", "media"].includes(type)) {
-                route.abort();
-            } else {
-                route.continue();
-            }
-        });
-
-        // 1. Measure Performance & Fetch Page
+        // 1. Measure Performance & Fetch Page HTML
         const startTime = Date.now();
-        let pageSizeBytes = 0;
         
-        page.on('response', async (response) => {
-            try {
-                // Approximate size since we are blocking resources, but this is fine for SEO HTML
-                const buffer = await response.body();
-                pageSizeBytes += buffer.length;
-            } catch (e) {
-                // Ignore failed responses
-            }
+        // Fetch HTML
+        const response = await axios.get(analysis.url, { 
+            timeout: 15000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
+            },
+            validateStatus: () => true, // resolve even on 4xx/5xx to analyze whatever is returned
+            responseType: 'arraybuffer' // to accurately measure size in bytes
         });
 
-        // Use domcontentloaded instead of networkidle, and a shorter timeout (15s)
-        await page.goto(analysis.url, { waitUntil: "domcontentloaded", timeout: 15000 });
         const loadTime = Date.now() - startTime;
+        const pageSizeBytes = response.data.length;
+        const html = response.data.toString('utf8');
+        
+        // Load HTML into Cheerio
+        const $ = cheerio.load(html);
 
         // 2. Extract Data & Run External Checks in Parallel
         const [extractedData, sslInfo, filesInfo] = await Promise.all([
-            extractPageData(page),
+            Promise.resolve(extractPageData($, analysis.url)),
             checkSSL(analysis.url),
             checkFiles(analysis.url)
         ]);
@@ -366,10 +355,5 @@ export async function runFullSEOAnalysis(analysisId) {
         analysis.status = "failed";
         await analysis.save();
         throw error;
-    } finally {
-        if (browser) {
-            await page.close().catch(() => {});
-            await browser.close().catch(() => {});
-        }
     }
 }
