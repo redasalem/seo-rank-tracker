@@ -12,6 +12,6 @@ analysisRouter.use(auth);
 analysisRouter.get("/", getUserAnalyses);
 analysisRouter.post("/start", validate(startAnalysisSchema), startAnalysis);
 analysisRouter.get("/:id", validate(mongoIdSchema, "params"), getAnalysis);
-analysisRouter.post("/:id/ai-insights", validate(mongoIdSchema, "params"), generateAiInsights);
+analysisRouter.post("/:id/ai-chat", validate(mongoIdSchema, "params"), generateAiInsights);
 
 export default analysisRouter;

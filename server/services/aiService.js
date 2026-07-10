@@ -9,12 +9,14 @@ class AIService {
     }
 
     /**
-     * Generate SEO recommendations based on the analysis data.
+     * Send a chat message to the AI consultant.
      * @param {Object} analysis - The full analysis object from DB.
+     * @param {string} message - The user's message.
+     * @param {Array} history - The chat history array.
      * @param {string} language - The preferred language (e.g., 'ar' or 'en').
      * @returns {Promise<string>} The markdown formatted AI response.
      */
-    async generateSeoInsights(analysis, language = "en") {
+    async sendChatMessage(analysis, message, history = [], language = "en") {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
             throw new Error("GEMINI_API_KEY is not configured in environment variables.");
@@ -23,50 +25,33 @@ class AIService {
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const systemInstruction = `
-You are an expert SEO consultant. Your job is to analyze website SEO data and provide an actionable, easy-to-understand report for the website owner.
-Format your response in Markdown. Use bullet points and bold text for readability.
-The response MUST be in ${language === "ar" ? "Arabic" : "English"}.
-Structure your response exactly like this:
-1. 🎯 **Executive Summary** (A brief 2-sentence summary of the site's overall health).
-2. ✅ **Strengths** (What the site is doing well based on the data).
-3. ⚠️ **Areas for Improvement** (The most critical issues).
-4. 🛠️ **Action Plan** (3-5 concrete, actionable steps the owner should take right now to improve their score).
-Keep the tone professional, encouraging, and highly practical. Avoid technical jargon where possible, or explain it simply.
-        `.trim();
-
-        // Prepare the data payload to send to Gemini
-        const dataPayload = {
-            url: analysis.url,
-            overallScore: analysis.overallScore,
-            performance: {
-                loadTime: analysis.loadTime,
-                pageSize: analysis.pageSize,
-                wordCount: analysis.wordCount,
-            },
-            categories: analysis.categories,
-            issues: analysis.issues.map(i => ({
-                severity: i.severity,
-                category: i.category,
-                message: i.message
-            }))
-        };
-
-        const fullPrompt = `
-${systemInstruction}
-
-Please analyze the following SEO data and provide insights:
-\`\`\`json
-${JSON.stringify(dataPayload, null, 2)}
-\`\`\`
-        `.trim();
+You are an expert SEO consultant assisting the user with their website. Keep your answers brief, fast, and highly actionable.
+Reply strictly in ${language === "ar" ? "Arabic" : "English"}.
+Context about the website being analyzed:
+URL: ${analysis.url}
+Overall Score: ${analysis.overallScore}
+Performance: Load Time ${analysis.loadTime}ms, Page Size ${analysis.pageSize}KB
+Issues count: ${analysis.issues.length}
+Top Issues: ${JSON.stringify(analysis.issues.map(i => i.message).slice(0, 3))}
+`.trim();
 
         try {
-            // Using standard model initialization without systemInstruction parameter
-            const modelWithSystem = genAI.getGenerativeModel({ 
-                model: "gemini-flash-latest"
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-flash-latest",
+                systemInstruction
             });
 
-            const result = await modelWithSystem.generateContent(fullPrompt);
+            // Format history for Gemini SDK
+            const formattedHistory = history.map(msg => ({
+                role: msg.role === "ai" ? "model" : "user",
+                parts: [{ text: msg.content }]
+            }));
+
+            const chat = model.startChat({
+                history: formattedHistory,
+            });
+
+            const result = await chat.sendMessage(message);
             const response = result.response;
             return response.text();
         } catch (error) {

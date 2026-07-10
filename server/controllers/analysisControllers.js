@@ -131,13 +131,17 @@ export const getUserAnalyses = async (req, res) => {
     }
 };
 
-// @desc    Generate AI Insights for an existing analysis
-// @route   POST /api/analysis/:id/ai-insights
+// @desc    Send a chat message to AI Consultant
+// @route   POST /api/analysis/:id/ai-chat
 // @access  Private
 export const generateAiInsights = async (req, res) => {
     try {
         const { id } = req.params;
-        const { language } = req.body;
+        const { message, history, language } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ message: "Message is required" });
+        }
 
         const analysis = await Analysis.findById(id);
         if (!analysis) {
@@ -149,16 +153,12 @@ export const generateAiInsights = async (req, res) => {
             return res.status(401).json({ message: "Not authorized" });
         }
 
-        // Generate insights
-        const insights = await aiService.generateSeoInsights(analysis, language || "en");
+        // Generate response
+        const reply = await aiService.sendChatMessage(analysis, message, history, language || "en");
 
-        // Save to DB
-        analysis.aiInsights = insights;
-        await analysis.save();
-
-        res.status(200).json({ success: true, aiInsights: insights });
+        res.status(200).json({ success: true, reply });
     } catch (error) {
         console.error("AI Generation Error:", error);
-        res.status(500).json({ success: false, message: error.message || "Failed to generate AI insights" });
+        res.status(500).json({ success: false, message: error.message || "Failed to generate AI reply" });
     }
 };
