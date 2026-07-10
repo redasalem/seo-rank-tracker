@@ -63,7 +63,7 @@ ${JSON.stringify(dataPayload, null, 2)}
         try {
             // Using standard model initialization without systemInstruction parameter
             const modelWithSystem = genAI.getGenerativeModel({ 
-                model: "gemini-2.5-flash"
+                model: "gemini-flash-latest"
             });
 
             const result = await modelWithSystem.generateContent(fullPrompt);
