@@ -145,7 +145,7 @@ export const generateAiInsights = async (req, res) => {
         }
 
         // Check if user owns it
-        if (analysis.userId.toString() !== req.user._id.toString()) {
+        if (analysis.userId.toString() !== req.user.id) {
             return res.status(401).json({ message: "Not authorized" });
         }
 
