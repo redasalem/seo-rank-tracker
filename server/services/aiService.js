@@ -70,7 +70,7 @@ ${JSON.stringify(dataPayload, null, 2)}
             return response.text();
         } catch (error) {
             console.error("Gemini API Error:", error);
-            throw new Error("Failed to generate AI insights.");
+            throw new Error(`Gemini API Error: ${error.message}`);
         }
     }
 }
