@@ -67,11 +67,8 @@ JWT_SECRET="your_jwt_secret_here"
 REFRESH_TOKEN_SECRET="your_refresh_secret_here"
 CRON_SECRET="your_cron_secret_here"
 
-# Scraper (Browserbase)
-BROWSERBASE_API_KEY="your_browserbase_api_key_here"
-BROWSERBASE_PROJECT_ID="your_browserbase_project_id_here"
-
-# Stripe 
+# 5. AI & Scraping
+SERPAPI_API_KEY="your_serpapi_api_key_here" 
 STRIPE_SECRET_KEY="sk_test_..."
 STRIPE_WEBHOOK_SECRET="whsec_..."
 
