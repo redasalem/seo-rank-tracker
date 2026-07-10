@@ -84,7 +84,10 @@ const analysisSchema = new mongoose.Schema({
     },
     
     // Detected Issues
-    issues: [issueSchema]
+    issues: [issueSchema],
+    
+    // AI Generated Recommendations
+    aiInsights: { type: String, default: "" }
 }, { timestamps: true });
 
 analysisSchema.index({ userId: 1, createdAt: -1 });

@@ -1,6 +1,7 @@
 import Analysis from "../models/analysisModel.js";
 import User from "../models/User.js";
 import { runFullSEOAnalysis } from "../services/seoAnalysisService.js";
+import aiService from "../services/aiService.js";
 
 // @desc    Start a new SEO analysis
 // @route   POST /api/analysis/start
@@ -127,5 +128,37 @@ export const getUserAnalyses = async (req, res) => {
     } catch (error) {
         console.error("Error fetching user analyses:", error);
         res.status(500).json({ message: "Server error" });
+    }
+};
+
+// @desc    Generate AI Insights for an existing analysis
+// @route   POST /api/analysis/:id/ai-insights
+// @access  Private
+export const generateAiInsights = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { language } = req.body;
+
+        const analysis = await Analysis.findById(id);
+        if (!analysis) {
+            return res.status(404).json({ message: "Analysis not found" });
+        }
+
+        // Check if user owns it
+        if (analysis.userId.toString() !== req.user._id.toString()) {
+            return res.status(401).json({ message: "Not authorized" });
+        }
+
+        // Generate insights
+        const insights = await aiService.generateSeoInsights(analysis, language || "en");
+
+        // Save to DB
+        analysis.aiInsights = insights;
+        await analysis.save();
+
+        res.status(200).json({ success: true, aiInsights: insights });
+    } catch (error) {
+        console.error("AI Generation Error:", error);
+        res.status(500).json({ success: false, message: error.message || "Failed to generate AI insights" });
     }
 };

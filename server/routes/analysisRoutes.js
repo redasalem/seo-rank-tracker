@@ -1,5 +1,5 @@
 import express from "express";
-import { startAnalysis, getAnalysis, getUserAnalyses } from "../controllers/analysisControllers.js";
+import { startAnalysis, getAnalysis, getUserAnalyses, generateAiInsights } from "../controllers/analysisControllers.js";
 import auth from "../middleware/auth.js";
 import { validate, startAnalysisSchema, mongoIdSchema } from "../middleware/validations.js";
 
@@ -12,5 +12,6 @@ analysisRouter.use(auth);
 analysisRouter.get("/", getUserAnalyses);
 analysisRouter.post("/start", validate(startAnalysisSchema), startAnalysis);
 analysisRouter.get("/:id", validate(mongoIdSchema, "params"), getAnalysis);
+analysisRouter.post("/:id/ai-insights", validate(mongoIdSchema, "params"), generateAiInsights);
 
 export default analysisRouter;
