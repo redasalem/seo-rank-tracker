@@ -60,18 +60,28 @@ ${JSON.stringify(dataPayload, null, 2)}
 \`\`\`
         `.trim();
 
-        try {
-            // Using standard model initialization without systemInstruction parameter
-            const modelWithSystem = genAI.getGenerativeModel({ 
-                model: "gemini-flash-latest"
-            });
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                // Using standard model initialization without systemInstruction parameter
+                const modelWithSystem = genAI.getGenerativeModel({ 
+                    model: "gemini-flash-latest"
+                });
 
-            const result = await modelWithSystem.generateContent(fullPrompt);
-            const response = result.response;
-            return response.text();
-        } catch (error) {
-            console.error("Gemini API Error:", error);
-            throw new Error(`Gemini API Error: ${error.message}`);
+                const result = await modelWithSystem.generateContent(fullPrompt);
+                const response = result.response;
+                return response.text();
+            } catch (error) {
+                if (error.message && error.message.includes('503') && retries > 1) {
+                    console.log("Google servers busy, retrying...");
+                    retries--;
+                    // Wait 2 seconds before retrying
+                    await new Promise(res => setTimeout(res, 2000));
+                    continue;
+                }
+                console.error("Gemini API Error:", error);
+                throw new Error(`Gemini API Error: ${error.message}`);
+            }
         }
     }
 }
