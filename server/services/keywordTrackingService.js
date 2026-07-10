@@ -1,5 +1,5 @@
 import KeywordTracking from "../models/keywordTracking.js";
-import { createBrowser, closeBrowser, scrapeGoogle } from "./rankTrackerService.js";
+import { searchGoogle } from "./rankTrackerService.js";
 import { createNotification } from "./notificationService.js";
 
 // ─── تحليل النتائج: إيجاد موقع المستخدم + المنافسين ──────────────────────
@@ -83,16 +83,16 @@ function updateKeywordData(tracking, found, competitors) {
 }
 
 // ─── معالجة كلمة مفتاحية واحدة ────────────────────────────────────────────
-async function processOneKeyword(page, tracking) {
+async function processOneKeyword(tracking) {
     console.log(`🔍 Searching: "${tracking.keyword}" for ${tracking.domain}`);
 
     try {
-        // 1. البحث في جوجل عبر الـ Scraper
-        const results = await scrapeGoogle(page, tracking.keyword, tracking.country);
-        console.log(`  📊 Scraper returned ${results.length} results for "${tracking.keyword}" (looking for: ${tracking.domain})`);
+        // 1. البحث في جوجل عبر SerpApi
+        const results = await searchGoogle(tracking.keyword, tracking.country);
+        console.log(`  📊 SerpApi returned ${results.length} results for "${tracking.keyword}" (looking for: ${tracking.domain})`);
 
         if (results.length === 0) {
-            throw new Error("No results returned - possible block");
+            throw new Error("No results returned from SerpApi");
         }
 
         // 2. تحليل النتائج
@@ -155,61 +155,50 @@ export async function processAllPendingKeywords() {
     console.log("⏰ Starting to process all pending keywords...");
     
     let processedCount = 0;
-    let browser, page;
-    let browserOpen = false;
     const startTime = Date.now();
-    const MAX_EXECUTION_TIME = 45000; // 45 seconds max execution time for Vercel
+    const MAX_EXECUTION_TIME = 50000; // 50 seconds (SerpApi is much faster, no browser overhead)
 
     try {
         while (true) {
             // Check if we are approaching Vercel's timeout
             if (Date.now() - startTime >= MAX_EXECUTION_TIME) {
-                console.log(`⏱️ Approaching Vercel execution limit. Stopping gracefully after processing ${processedCount} keywords.`);
+                console.log(`⏱️ Approaching execution limit. Stopping gracefully after processing ${processedCount} keywords.`);
                 break;
             }
 
             const pendingKeywords = await KeywordTracking.find({
                 status: "pending",
                 active: true,
-            }).limit(5); // Increased batch size since scraping is now faster
+            }).limit(10); // Larger batch since SerpApi is fast
 
             if (pendingKeywords.length === 0) {
                 console.log(`📭 No more pending keywords. Processed total: ${processedCount}`);
                 break;
             }
 
-            if (!browserOpen) {
-                ({ browser, page } = await createBrowser());
-                browserOpen = true;
-            }
-
             for (const tracking of pendingKeywords) {
-                // Double check inside the loop to avoid starting a slow keyword near the end
                 if (Date.now() - startTime >= MAX_EXECUTION_TIME) {
                     console.log(`⏱️ Execution limit reached during batch processing.`);
                     break;
                 }
 
-                const SINGLE_KEYWORD_TIMEOUT = 45000; // 45 seconds
+                const SINGLE_KEYWORD_TIMEOUT = 30000; // 30 seconds per keyword
                 await Promise.race([
-                    processOneKeyword(page, tracking),
+                    processOneKeyword(tracking),
                     new Promise((_, reject) => 
                         setTimeout(() => reject(new Error("Keyword timeout")), SINGLE_KEYWORD_TIMEOUT)
                     )
                 ]).catch(err => {
-                    console.error(`🚨 Timeout for keyword ${tracking.keyword}:`, err.message);
+                    console.error(`🚨 Failed for keyword ${tracking.keyword}:`, err.message);
                 });
                 processedCount++;
-                // انتظار خفيف بين كل كلمة
-                await page.waitForTimeout(1000 + Math.random() * 1000);
+
+                // Small delay between API calls to respect rate limits
+                await new Promise(resolve => setTimeout(resolve, 500));
             }
         }
     } catch (error) {
-        console.error("🚨 Session error:", error.message);
-    } finally {
-        if (browser && browserOpen) {
-            await closeBrowser(browser, page);
-        }
+        console.error("🚨 Processing error:", error.message);
     }
 }
 
@@ -221,16 +210,7 @@ export async function processSingleKeyword(keywordId) {
         throw new Error("Keyword not found");
     }
 
-    let browser, page;
-
-    try {
-        ({ browser, page } = await createBrowser());
-        await processOneKeyword(page, tracking);
-    } finally {
-        if (browser) {
-            await closeBrowser(browser, page);
-        }
-    }
+    await processOneKeyword(tracking);
 
     return tracking;
 }
