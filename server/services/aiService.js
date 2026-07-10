@@ -37,7 +37,7 @@ Top Issues: ${JSON.stringify(analysis.issues.map(i => i.message).slice(0, 3))}
 
         try {
             const model = genAI.getGenerativeModel({ 
-                model: "gemini-flash-latest",
+                model: "gemini-3.5-flash",
                 systemInstruction
             });
 
