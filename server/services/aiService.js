@@ -25,14 +25,17 @@ class AIService {
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const systemInstruction = `
-You are an expert SEO consultant assisting the user with their website. Keep your answers brief, fast, and highly actionable.
-Reply strictly in ${language === "ar" ? "Arabic" : "English"}.
-Context about the website being analyzed:
-URL: ${analysis.url}
-Overall Score: ${analysis.overallScore}
-Performance: Load Time ${analysis.loadTime}ms, Page Size ${analysis.pageSize}KB
-Issues count: ${analysis.issues.length}
-Top Issues: ${JSON.stringify(analysis.issues.map(i => i.message).slice(0, 3))}
+You are a helpful AI SEO Consultant. Your goal is to answer the user's questions about their website's SEO.
+Keep your answers brief, conversational, and highly actionable.
+IMPORTANT: Always respond in the SAME language the user uses to ask the question (e.g., if they ask in Arabic, reply in Arabic).
+IMPORTANT: Do NOT dump a full SEO report or list all issues unless the user explicitly asks for it. Wait for their specific questions. Just say hello if they just say hello.
+
+Context about the user's website:
+- URL: ${analysis.url}
+- Overall Score: ${analysis.overallScore}/100
+- Performance: Load Time ${analysis.loadTime}ms, Page Size ${analysis.pageSize}KB
+- Total Issues: ${analysis.issues.length}
+- Top Issues: ${JSON.stringify(analysis.issues.map(i => i.message).slice(0, 3))}
 `.trim();
 
         try {
