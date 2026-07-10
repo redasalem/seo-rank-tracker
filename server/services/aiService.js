@@ -51,7 +51,9 @@ Keep the tone professional, encouraging, and highly practical. Avoid technical j
             }))
         };
 
-        const prompt = `
+        const fullPrompt = `
+${systemInstruction}
+
 Please analyze the following SEO data and provide insights:
 \`\`\`json
 ${JSON.stringify(dataPayload, null, 2)}
@@ -59,13 +61,12 @@ ${JSON.stringify(dataPayload, null, 2)}
         `.trim();
 
         try {
-            // Using system instructions in Gemini 1.5/2.5
+            // Using standard model initialization without systemInstruction parameter
             const modelWithSystem = genAI.getGenerativeModel({ 
-                model: "gemini-1.5-flash",
-                systemInstruction 
+                model: "gemini-1.5-flash"
             });
 
-            const result = await modelWithSystem.generateContent(prompt);
+            const result = await modelWithSystem.generateContent(fullPrompt);
             const response = result.response;
             return response.text();
         } catch (error) {
