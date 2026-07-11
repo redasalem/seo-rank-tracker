@@ -7,6 +7,8 @@ let mongoServer;
 process.env.JWT_SECRET = 'test-jwt-secret-key';
 process.env.REFRESH_TOKEN_SECRET = 'test-refresh-token-secret-key';
 
+
+
 // Start the in-memory MongoDB instance before all tests
 beforeAll(async () => {
     mongoServer = await MongoMemoryServer.create();
@@ -26,5 +28,7 @@ afterEach(async () => {
 // Disconnect and stop the server after all tests
 afterAll(async () => {
   await mongoose.disconnect();
-  await mongoServer.stop();
+  if (mongoServer) {
+      await mongoServer.stop();
+  }
 });

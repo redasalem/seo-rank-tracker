@@ -32,8 +32,8 @@ describe('Analysis Endpoints (Plan Limits)', () => {
     });
 
     it('should allow free user to analyze up to 10 times', async () => {
-        // We mainly test the limit logic. Set the user's analysis count to 10.
-        await User.findByIdAndUpdate(userId, { analysisCount: 10 });
+        // We mainly test the limit logic. Set the user's analysis count to 10 and date to today so it doesn't reset to 0.
+        await User.findByIdAndUpdate(userId, { analysisCount: 10, lastAnalysisDate: new Date() });
         
         // 11th time - SHOULD FAIL
         const res = await request(app)
