@@ -61,6 +61,12 @@ const scrapingLimiter = rateLimit({
     message: { message: "Too many requests. Please wait before trying again." }
 });
 
+const aiLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // 10 AI messages per minute per IP
+    message: { message: "Too many AI requests. Please wait before sending another message." }
+});
+
 // Apply rate limiting to all API requests
 app.use("/api", limiter);
 
@@ -72,6 +78,9 @@ app.use("/api/auth/forgot-password", authLimiter);
 app.use("/api/analysis/start", scrapingLimiter);
 app.use("/api/rank/add", scrapingLimiter);
 app.use("/api/rank/:id/refresh", scrapingLimiter);
+
+// Apply rate limiting to AI Chat endpoint
+app.use("/api/analysis/:id/ai-chat", aiLimiter);
 
 import subscriptionRouter from "./routes/subscriptionRoutes.js";
 import { stripeWebhook } from "./controllers/subscriptionControllers.js";

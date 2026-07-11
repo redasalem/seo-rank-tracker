@@ -139,8 +139,14 @@ export const generateAiInsights = async (req, res) => {
         const { id } = req.params;
         const { message, history, language } = req.body;
 
-        if (!message) {
+        if (!message || typeof message !== "string") {
             return res.status(400).json({ message: "Message is required" });
+        }
+        if (message.length > 1000) {
+            return res.status(400).json({ message: "Message too long. Maximum 1000 characters." });
+        }
+        if (history && history.length > 20) {
+            return res.status(400).json({ message: "Chat history too long. Please start a new conversation." });
         }
 
         const analysis = await Analysis.findById(id);
