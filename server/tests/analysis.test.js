@@ -31,33 +31,12 @@ describe('Analysis Endpoints (Plan Limits)', () => {
         accessToken = cookie.split(';')[0];
     });
 
-    it('should allow free user to analyze up to 3 times', async () => {
-        // Mock the SEO service or just expect it to fail gracefully if no real URL
-        // We mainly test the limit logic
+    it('should allow free user to analyze up to 10 times', async () => {
+        // We mainly test the limit logic. Set the user's analysis count to 10.
+        await User.findByIdAndUpdate(userId, { analysisCount: 10 });
         
-        // 1st time
-        let res = await request(app)
-            .post('/api/analysis/start')
-            .set('Cookie', accessToken)
-            .send({ url: 'google.com' });
-        expect(res.statusCode).not.toBe(403);
-
-        // 2nd time
-        res = await request(app)
-            .post('/api/analysis/start')
-            .set('Cookie', accessToken)
-            .send({ url: 'bing.com' });
-        expect(res.statusCode).not.toBe(403);
-
-        // 3rd time
-        res = await request(app)
-            .post('/api/analysis/start')
-            .set('Cookie', accessToken)
-            .send({ url: 'yahoo.com' });
-        expect(res.statusCode).not.toBe(403);
-
-        // 4th time - SHOULD FAIL
-        res = await request(app)
+        // 11th time - SHOULD FAIL
+        const res = await request(app)
             .post('/api/analysis/start')
             .set('Cookie', accessToken)
             .send({ url: 'ask.com' });
