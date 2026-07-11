@@ -419,7 +419,7 @@ export const deleteAccount = async (req, res) => {
             User.findByIdAndDelete(userId),
             KeywordTracking.deleteMany({ userId }),
             Analysis.deleteMany({ userId }),
-            Notification.deleteMany({ userId })
+            Notification.deleteMany({ user: userId })
         ]);
 
         // Clear refresh token cookie
