@@ -92,7 +92,26 @@ app.post("/api/subscription/webhook", express.raw({ type: "application/json" }),
 // middleware
 app.use(express.json());
 app.use(cookieParser());
-app.use(mongoSanitize());
+
+// Custom safe mongo sanitize to prevent crashing in Jest/Vercel (read-only req properties)
+app.use((req, res, next) => {
+    ['body', 'params', 'query'].forEach((key) => {
+        if (req[key]) {
+            const sanitized = mongoSanitize.sanitize(req[key]);
+            try {
+                req[key] = sanitized;
+            } catch (e) {
+                if (typeof req[key] === 'object' && req[key] !== null) {
+                    for (const prop in req[key]) {
+                        delete req[key][prop];
+                    }
+                    Object.assign(req[key], sanitized);
+                }
+            }
+        }
+    });
+    next();
+});
 
 // Request logging middleware
 app.use((req, res, next) => {
