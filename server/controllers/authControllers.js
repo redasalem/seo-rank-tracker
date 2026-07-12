@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import Stripe from "stripe";
 import User from "../models/User.js";
 import { sendEmail } from "../utils/emailService.js";
 import KeywordTracking from "../models/keywordTracking.js";
@@ -412,6 +413,18 @@ export const deleteAccount = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ message: "Incorrect password" });
+        }
+
+        // Cancel Stripe subscription if user has one
+        if (user.stripeSubscriptionId && process.env.STRIPE_SECRET_KEY) {
+            try {
+                const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+                await stripe.subscriptions.cancel(user.stripeSubscriptionId);
+                console.log(`✅ Stripe subscription cancelled for user ${userId}`);
+            } catch (stripeErr) {
+                console.error("Failed to cancel Stripe subscription:", stripeErr.message);
+                // Continue with deletion even if Stripe cancellation fails
+            }
         }
 
         // Delete all user data
