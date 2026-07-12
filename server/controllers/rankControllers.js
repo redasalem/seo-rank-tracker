@@ -40,13 +40,18 @@ export const addKeyword = async (req, res) => {
 
         // Limit Check based on plan
         const user = await User.findById(userId);
-        if (user && user.plan !== "max") {
+        if (user) {
             const count = await KeywordTracking.countDocuments({ userId });
-            const limit = user.plan === "pro" ? 50 : 5;
+            const limits = { free: 5, pro: 50, max: 200 };
+            const limit = limits[user.plan] || 5;
+            
             if (count >= limit) {
-                return res.status(403).json({ 
-                    message: `You have reached your limit of ${limit} keywords on the ${user.plan === "pro" ? "Pro" : "Free"} plan. Please upgrade to ${user.plan === "pro" ? "Max" : "Pro"}.` 
-                });
+                const nextPlan = user.plan === "free" ? "Pro" : "Max";
+                const message = user.plan === "max" 
+                    ? "You have reached the maximum limit of 200 keywords on the Max plan."
+                    : `You have reached your limit of ${limit} keywords on the ${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} plan. Please upgrade to ${nextPlan}.`;
+                
+                return res.status(403).json({ message });
             }
         }
 
