@@ -29,10 +29,12 @@ export const startAnalysis = async (req, res) => {
             await user.save();
         }
 
-        // Check limits
-        if (user.plan === "free" && user.analysisCount >= 10) {
+        // Check limits based on plan
+        const planLimits = { free: 5, pro: 20, max: 60 };
+        const limit = planLimits[user.plan as keyof typeof planLimits] || 5;
+        if (user.analysisCount >= limit) {
             return res.status(403).json({ 
-                message: "You have reached your daily limit of 10 analyses on the Free plan. Please upgrade to Pro."
+                message: `You have reached your daily limit of ${limit} analyses on the ${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} plan. Please upgrade for more.`
             });
         }
 

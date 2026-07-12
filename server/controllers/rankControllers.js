@@ -38,13 +38,14 @@ export const addKeyword = async (req, res) => {
             return res.status(409).json({ message: "You are already tracking this keyword for this domain" });
         }
 
-        // Limit Check for Free Plan (Max 10 keywords)
+        // Limit Check based on plan
         const user = await User.findById(userId);
-        if (user && user.plan === "free") {
+        if (user && user.plan !== "max") {
             const count = await KeywordTracking.countDocuments({ userId });
-            if (count >= 10) {
+            const limit = user.plan === "pro" ? 50 : 5;
+            if (count >= limit) {
                 return res.status(403).json({ 
-                    message: "You have reached your limit of 10 keywords on the Free plan. Please upgrade to Pro." 
+                    message: `You have reached your limit of ${limit} keywords on the ${user.plan === "pro" ? "Pro" : "Free"} plan. Please upgrade to ${user.plan === "pro" ? "Max" : "Pro"}.` 
                 });
             }
         }
@@ -286,7 +287,7 @@ export const getDashboardStats = async (req, res) => {
                 analysisLimit: user ? {
                     plan: user.plan,
                     used: todayAnalysisCount,
-                    max: user.plan === 'free' ? 10 : 'unlimited'
+                    max: user.plan === 'free' ? 5 : user.plan === 'pro' ? 20 : 60
                 } : null
             }
         });

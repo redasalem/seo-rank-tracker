@@ -9,13 +9,20 @@ if (process.env.STRIPE_SECRET_KEY) {
     console.warn("⚠️ STRIPE_SECRET_KEY is not defined. Payments and subscriptions will not work.");
 }
 
-// @desc    Create Stripe Checkout Session for Pro plan
+// Price IDs for each plan
+const PRICE_IDS = {
+    pro: "price_1TsRNeAOKi6yj1rDLAvSnk3z",
+    max: "price_1TsRRfAOKi6yj1rDYOCUn7BR"
+};
+
+// @desc    Create Stripe Checkout Session for Pro or Max plan
 // @route   POST /api/subscription/create-checkout-session
 // @access  Private
 export const createCheckoutSession = async (req, res) => {
     try {
         const userId = req.user.id;
         const user = await User.findById(userId);
+        const plan = req.body.plan || "pro";
 
         if (!stripe) {
             return res.status(500).json({ success: false, message: "Payment service is not configured. Please contact support." });
@@ -25,10 +32,20 @@ export const createCheckoutSession = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        if (user.plan === "pro") {
-            return res.status(400).json({ success: false, message: "You are already on the Pro plan!" });
+        if (plan !== "pro" && plan !== "max") {
+            return res.status(400).json({ success: false, message: "Invalid plan. Choose 'pro' or 'max'." });
         }
 
+        // Prevent upgrading to same or lower plan
+        if (user.plan === plan) {
+            return res.status(400).json({ success: false, message: `You are already on the ${plan.charAt(0).toUpperCase() + plan.slice(1)} plan!` });
+        }
+        if (user.plan === "max" && plan === "pro") {
+            return res.status(400).json({ success: false, message: "You are already on the Max plan. Use the billing portal to manage your subscription." });
+        }
+
+        const priceId = PRICE_IDS[plan];
+        const planName = plan === "max" ? "Max" : "Pro";
         const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
         // Create Stripe checkout session
@@ -39,20 +56,13 @@ export const createCheckoutSession = async (req, res) => {
             client_reference_id: userId,
             line_items: [
                 {
-                    price_data: {
-                        currency: "usd",
-                        product_data: {
-                            name: "RankBoost Pro Plan",
-                            description: "Unlimited SEO analyses and keyword tracking.",
-                        },
-                        unit_amount: 300, // $3.00 per month
-                        recurring: {
-                            interval: "month",
-                        },
-                    },
+                    price: priceId,
                     quantity: 1,
                 },
             ],
+            metadata: {
+                plan: plan,
+            },
             success_url: `${frontendUrl}/settings?success=true&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${frontendUrl}/settings?canceled=true`,
         });
@@ -98,16 +108,28 @@ export const stripeWebhook = async (req, res) => {
                 const subscriptionId = session.subscription;
 
                 if (userId) {
+                    // Determine plan from metadata or price ID
+                    let plan = session.metadata?.plan || "pro";
+
+                    // Fallback: check line items price ID
+                    if (!session.metadata?.plan && session.line_items) {
+                        const priceId = session.line_items?.data?.[0]?.price?.id;
+                        if (priceId === PRICE_IDS.max) plan = "max";
+                        else plan = "pro";
+                    }
+
                     const user = await User.findByIdAndUpdate(userId, {
-                        plan: "pro",
+                        plan,
                         stripeCustomerId: customerId,
                         stripeSubscriptionId: subscriptionId,
                     }, { new: true });
-                    console.log(`✅ User ${userId} upgraded to PRO`);
+                    console.log(`✅ User ${userId} upgraded to ${plan.toUpperCase()}`);
 
                     if (user && user.email) {
                         const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-                        sendInvoiceEmail(user.email, user.name, "$3.00", date, "Pro").catch(err => {
+                        const amount = plan === "max" ? "$9.00" : "$4.00";
+                        const planName = plan === "max" ? "Max" : "Pro";
+                        sendInvoiceEmail(user.email, user.name, amount, date, planName).catch(err => {
                             console.error("Failed to send invoice email:", err);
                         });
                     }
