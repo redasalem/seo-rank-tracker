@@ -42,7 +42,22 @@ export const validate = (schema, source = "body") => {
             return data;
         };
 
-        req[source] = cleanData(result.data);
+        const sanitized = cleanData(result.data);
+        
+        try {
+            // Try standard assignment (works in local Express)
+            req[source] = sanitized;
+        } catch (e) {
+            // Vercel serverless environments define req.body / req.query as read-only getters.
+            // Fallback: clear the existing object and mutate it in place.
+            if (typeof req[source] === 'object' && req[source] !== null) {
+                for (const key in req[source]) {
+                    delete req[source][key];
+                }
+                Object.assign(req[source], sanitized);
+            }
+        }
+        
         next();
     };
 };
