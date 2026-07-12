@@ -31,7 +31,7 @@ export const startAnalysis = async (req, res) => {
 
         // Check limits based on plan
         const planLimits = { free: 5, pro: 20, max: 60 };
-        const limit = planLimits[user.plan as keyof typeof planLimits] || 5;
+        const limit = planLimits[user.plan] || 5;
         if (user.analysisCount >= limit) {
             return res.status(403).json({ 
                 message: `You have reached your daily limit of ${limit} analyses on the ${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} plan. Please upgrade for more.`

@@ -31,11 +31,11 @@ describe('Analysis Endpoints (Plan Limits)', () => {
         accessToken = cookie.split(';')[0];
     });
 
-    it('should allow free user to analyze up to 10 times', async () => {
-        // We mainly test the limit logic. Set the user's analysis count to 10 and date to today so it doesn't reset to 0.
-        await User.findByIdAndUpdate(userId, { analysisCount: 10, lastAnalysisDate: new Date() });
+    it('should allow free user to analyze up to 5 times', async () => {
+        // We mainly test the limit logic. Set the user's analysis count to 5 and date to today so it doesn't reset to 0.
+        await User.findByIdAndUpdate(userId, { analysisCount: 5, lastAnalysisDate: new Date() });
         
-        // 11th time - SHOULD FAIL
+        // 6th time - SHOULD FAIL
         const res = await request(app)
             .post('/api/analysis/start')
             .set('Cookie', accessToken)
@@ -45,16 +45,17 @@ describe('Analysis Endpoints (Plan Limits)', () => {
         expect(res.body.message).toContain('daily limit');
     });
 
-    it('should allow pro user unlimited analyses', async () => {
-        // Upgrade user to pro
-        await User.findByIdAndUpdate(userId, { plan: 'pro', analysisCount: 3 });
+    it('should limit pro user to 20 analyses', async () => {
+        // Upgrade user to pro and set count to 20
+        await User.findByIdAndUpdate(userId, { plan: 'pro', analysisCount: 20, lastAnalysisDate: new Date() });
 
-        // Even with count 3, it should allow because plan is pro
+        // 21st time - SHOULD FAIL
         const res = await request(app)
             .post('/api/analysis/start')
             .set('Cookie', accessToken)
             .send({ url: 'google.com' });
             
-        expect(res.statusCode).not.toBe(403);
+        expect(res.statusCode).toBe(403);
+        expect(res.body.message).toContain('daily limit');
     });
 });
