@@ -261,14 +261,8 @@ export const getDashboardStats = async (req, res) => {
         // Get user for limits
         const user = await User.findById(userId);
 
-        // Dynamically calculate today's completed analyses to ensure dashboard is always accurate
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const todayAnalysisCount = await Analysis.countDocuments({
-            userId,
-            createdAt: { $gte: startOfDay },
-            status: "completed"
-        });
+        // Use user.analysisCount directly to match limit enforcement
+        const todayAnalysisCount = user ? user.analysisCount || 0 : 0;
 
         res.status(200).json({
             stats: {
