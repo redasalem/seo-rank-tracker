@@ -61,7 +61,11 @@ export const registerSchema = z.object({
         .email("Please provide a valid email address")
         .toLowerCase(),
     password: z.string({ required_error: "Password is required" })
-        .min(6, "Password must be at least 6 characters")
+        .min(8, "Password must be at least 8 characters")
+        .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+        .regex(/[a-z]/, "Must contain at least one lowercase letter")
+        .regex(/[0-9]/, "Must contain at least one number")
+        .regex(/[^A-Za-z0-9]/, "Must contain at least one special character")
         .max(128, "Password must be at most 128 characters"),
 });
 
@@ -89,7 +93,11 @@ export const updatePasswordSchema = z.object({
     currentPassword: z.string({ required_error: "Current password is required" })
         .min(1, "Current password is required"),
     newPassword: z.string({ required_error: "New password is required" })
-        .min(6, "New password must be at least 6 characters")
+        .min(8, "New password must be at least 8 characters")
+        .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+        .regex(/[a-z]/, "Must contain at least one lowercase letter")
+        .regex(/[0-9]/, "Must contain at least one number")
+        .regex(/[^A-Za-z0-9]/, "Must contain at least one special character")
         .max(128, "New password must be at most 128 characters"),
 });
 
@@ -102,7 +110,11 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z.object({
     password: z.string({ required_error: "Password is required" })
-        .min(6, "Password must be at least 6 characters")
+        .min(8, "Password must be at least 8 characters")
+        .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+        .regex(/[a-z]/, "Must contain at least one lowercase letter")
+        .regex(/[0-9]/, "Must contain at least one number")
+        .regex(/[^A-Za-z0-9]/, "Must contain at least one special character")
         .max(128, "Password must be at most 128 characters"),
 });
 

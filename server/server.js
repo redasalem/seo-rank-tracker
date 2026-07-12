@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import mongoSanitize from "express-mongo-sanitize";
 import "dotenv/config";
 import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
@@ -91,6 +92,7 @@ app.post("/api/subscription/webhook", express.raw({ type: "application/json" }),
 // middleware
 app.use(express.json());
 app.use(cookieParser());
+app.use(mongoSanitize());
 
 // Request logging middleware
 app.use((req, res, next) => {
