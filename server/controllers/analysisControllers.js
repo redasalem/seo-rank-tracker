@@ -164,6 +164,11 @@ export const generateAiInsights = async (req, res) => {
         // Generate response
         const reply = await aiService.sendChatMessage(analysis, message, history, language || "en");
 
+        // Save chat history to DB
+        analysis.chatHistory.push({ role: "user", content: message });
+        analysis.chatHistory.push({ role: "ai", content: reply });
+        await analysis.save();
+
         res.status(200).json({ success: true, reply });
     } catch (error) {
         console.error("AI Generation Error:", error);

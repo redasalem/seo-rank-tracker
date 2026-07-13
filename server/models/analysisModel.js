@@ -87,7 +87,14 @@ const analysisSchema = new mongoose.Schema({
     issues: [issueSchema],
     
     // AI Generated Recommendations
-    aiInsights: { type: String, default: "" }
+    aiInsights: { type: String, default: "" },
+    
+    // AI Chat History
+    chatHistory: [{
+        role: { type: String, enum: ["user", "ai"], required: true },
+        content: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now }
+    }]
 }, { timestamps: true });
 
 analysisSchema.index({ userId: 1, createdAt: -1 });

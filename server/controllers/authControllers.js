@@ -150,6 +150,7 @@ export const login = async (req, res) => {
                 email: user.email,
                 plan: user.plan,
                 role: user.role,
+                analysisCount: user.analysisCount,
             },
         });
     } catch (error) {
@@ -232,6 +233,7 @@ export const updateProfile = async (req, res) => {
                 email: user.email,
                 plan: user.plan,
                 role: user.role,
+                analysisCount: user.analysisCount,
             }
         });
     } catch (error) {
