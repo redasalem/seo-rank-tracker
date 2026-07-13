@@ -17,6 +17,22 @@ export const register = async (req, res) => {
             return res.status(400).json({ message: "All fields are required" });
         }
 
+        // Strict Name Validation
+        if (name.trim().length < 3) {
+            return res.status(400).json({ message: "Name must be at least 3 characters long" });
+        }
+
+        // Strict Email Validation (Prevent r@gmail.com by requiring min prefix length)
+        const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Please enter a valid and secure email address." });
+        }
+
+        // Strict Password Validation
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -207,6 +223,17 @@ export const updateProfile = async (req, res) => {
 
         if (!name || !email) {
             return res.status(400).json({ message: "Name and email are required" });
+        }
+
+        // Strict Name Validation
+        if (name.trim().length < 3) {
+            return res.status(400).json({ message: "Name must be at least 3 characters long" });
+        }
+
+        // Strict Email Validation (Prevent r@gmail.com by requiring min prefix length)
+        const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Please enter a valid and secure email address." });
         }
 
         // Check if email is being changed and if it already exists
