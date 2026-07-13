@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema({
     isEmailVerified: { type: Boolean, default: false },
     isVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, default: null },
+    isBanned: { type: Boolean, default: false },
 
 },{timestamps:true})
 

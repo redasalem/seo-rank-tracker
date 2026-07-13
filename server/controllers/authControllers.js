@@ -104,6 +104,11 @@ export const login = async (req, res) => {
             return res.status(401).json({ message: "Invalid credentials" });
         }
 
+        // Check if user is banned
+        if (user.isBanned) {
+            return res.status(403).json({ message: "Your account has been suspended. Contact support for assistance." });
+        }
+
 
         // Generate Access Token (short lived)
         const accessToken = jwt.sign(
