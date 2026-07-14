@@ -69,10 +69,15 @@ export const startAnalysis = async (req, res) => {
             await runFullSEOAnalysis(newAnalysis._id);
         } catch (err) {
             console.error(`🚨 Background SEO scan failed for: ${url}`, err);
+            // Refund the user's analysis count since it failed
+            if (user.analysisCount > 0) {
+                user.analysisCount -= 1;
+                await user.save();
+            }
         }
 
         res.status(200).json({
-            message: "Analysis completed successfully",
+            message: "Analysis processing completed",
             analysisId: newAnalysis._id
         });
 

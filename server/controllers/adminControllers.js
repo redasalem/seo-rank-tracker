@@ -196,6 +196,10 @@ export const updateUser = async (req, res) => {
             if (!validRoles.includes(role)) {
                 return res.status(400).json({ message: `Invalid role. Must be one of: ${validRoles.join(", ")}` });
             }
+            // Prevent self-demotion
+            if (id === req.user.id && role !== "admin") {
+                return res.status(400).json({ message: "You cannot demote your own account" });
+            }
             updateFields.role = role;
         }
 
