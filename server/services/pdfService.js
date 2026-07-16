@@ -175,7 +175,7 @@ function buildReportHTML(analysis, { language = "en", isFreePlan = false }) {
     const dir = isRTL ? "rtl" : "ltr";
     const fontFamily = isRTL
         ? "'Noto Sans Arabic', 'Segoe UI', Tahoma, sans-serif"
-        : "'Inter', 'Segoe UI', Roboto, sans-serif";
+        : "'Inter', 'Noto Sans Arabic', 'Segoe UI', Roboto, sans-serif";
 
     const meta = analysis.metaData || {};
     const headings = analysis.headings || {};
