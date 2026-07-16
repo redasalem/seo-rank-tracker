@@ -16,14 +16,14 @@ describe('Auth Endpoints', () => {
         
         expect(res.statusCode).toEqual(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.message).toBe('User registered successfully.');
+        expect(res.body.message).toBe('Registration successful. Please check your email to verify your account.');
 
         // Check if user is in database
         const userInDb = await User.findOne({ email: testUser.email });
         expect(userInDb).toBeTruthy();
         expect(userInDb.name).toBe(testUser.name);
-        expect(userInDb.isVerified).toBe(true); // Auto-verified
-        expect(res.headers['set-cookie']).toBeDefined(); // Should set token cookie on register
+        expect(userInDb.isVerified).toBe(false); // Unverified initially
+        expect(userInDb.isEmailVerified).toBe(false); // Unverified initially
     });
 
     it('should not register user with existing email', async () => {
@@ -42,6 +42,9 @@ describe('Auth Endpoints', () => {
     it('should login an existing user', async () => {
         // Register user
         await request(app).post('/api/auth/register').send(testUser);
+
+        // Verify the user manually in the DB to allow login
+        await User.updateOne({ email: testUser.email }, { isVerified: true, isEmailVerified: true });
 
         const res = await request(app)
             .post('/api/auth/login')
@@ -62,6 +65,9 @@ describe('Auth Endpoints', () => {
 
     it('should not login with wrong password', async () => {
         await request(app).post('/api/auth/register').send(testUser);
+
+        // Verify the user manually in the DB to allow login
+        await User.updateOne({ email: testUser.email }, { isVerified: true, isEmailVerified: true });
 
         const res = await request(app)
             .post('/api/auth/login')
