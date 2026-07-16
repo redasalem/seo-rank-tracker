@@ -209,7 +209,7 @@ function buildReportHTML(analysis, { language = "en", isFreePlan = false }) {
         <tr>
             <td style="font-weight:600; width:160px; white-space:nowrap;">${escapeHtml(row.label)}</td>
             <td style="color:${row.value ? '#1f2937' : '#ef4444'}; word-break:break-all;">
-                ${row.value ? escapeHtml(row.value) : `<em>${t.missing}</em>`}
+                ${row.value ? `<bdi dir="auto">${escapeHtml(row.value)}</bdi>` : `<em>${t.missing}</em>`}
                 ${row.len !== undefined ? `<span style="color:#9ca3af; font-size:11px;"> (${row.len} ${t.chars})</span>` : ""}
             </td>
         </tr>
@@ -242,8 +242,8 @@ function buildReportHTML(analysis, { language = "en", isFreePlan = false }) {
                         <span style="background:${s.color}; color:white; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; text-transform:uppercase;">${t[issue.severity] || issue.severity}</span>
                         <span style="font-size:11px; color:#6b7280;">${escapeHtml(issue.category)}</span>
                     </div>
-                    <p style="font-weight:600; color:#1f2937; margin:4px 0 2px;">${escapeHtml(issue.message)}</p>
-                    <p style="font-size:12px; color:#6b7280; margin:0;">${t.recommendation}: ${escapeHtml(issue.recommendation)}</p>
+                    <p style="font-weight:600; color:#1f2937; margin:4px 0 2px;"><bdi dir="auto">${escapeHtml(issue.message)}</bdi></p>
+                    <p style="font-size:12px; color:#6b7280; margin:0;">${t.recommendation}: <bdi dir="auto">${escapeHtml(issue.recommendation)}</bdi></p>
                 </div>
             `;
         }).join("")
@@ -456,7 +456,7 @@ function buildReportHTML(analysis, { language = "en", isFreePlan = false }) {
 
         <!-- Info Box -->
         <div class="info-box">
-            <p><strong>${t.analyzedUrl}:</strong> ${escapeHtml(analysis.url)}</p>
+            <p><strong>${t.analyzedUrl}:</strong> <bdi dir="auto">${escapeHtml(analysis.url)}</bdi></p>
             <p><strong>${t.analysisDate}:</strong> ${analysisDate}</p>
         </div>
 
@@ -494,7 +494,7 @@ function buildReportHTML(analysis, { language = "en", isFreePlan = false }) {
             ${headings.h1Texts?.length > 0 ? `
                 <div style="margin-top:8px; padding:10px 14px; background:#f3f4f6; border-radius:8px;">
                     <p style="font-size:11px; color:#9ca3af; margin-bottom:4px;">H1 Text:</p>
-                    ${headings.h1Texts.map(text => `<p style="font-size:12px; color:#374151;">${escapeHtml(text)}</p>`).join("")}
+                    ${headings.h1Texts.map(text => `<p style="font-size:12px; color:#374151;"><bdi dir="auto">${escapeHtml(text)}</bdi></p>`).join("")}
                 </div>
             ` : ""}
         </div>
@@ -591,7 +591,7 @@ function buildReportHTML(analysis, { language = "en", isFreePlan = false }) {
                     <p style="font-weight:600; margin-bottom:6px;">${t.schemaMarkup}</p>
                     <div style="display:flex; flex-wrap:wrap; gap:6px;">
                         ${advanced.schemaTypes.map(type => `
-                            <span style="background:#ede9fe; color:#6366f1; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:600;">${escapeHtml(type)}</span>
+                            <span style="background:#ede9fe; color:#6366f1; padding:3px 10px; border-radius:6px; font-size:11px; font-weight:600;"><bdi dir="auto">${escapeHtml(type)}</bdi></span>
                         `).join("")}
                     </div>
                 </div>
