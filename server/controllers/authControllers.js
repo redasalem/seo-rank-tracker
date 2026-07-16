@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import User from "../models/User.js";
-import { sendEmail } from "../utils/emailService.js";
+import { sendEmail, sendVerificationEmail } from "../utils/emailService.js";
 import KeywordTracking from "../models/keywordTracking.js";
 import Analysis from "../models/analysisModel.js";
 import Notification from "../models/Notification.js";
@@ -42,56 +42,26 @@ export const register = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user (auto-verified, no email confirmation needed)
+        // Generate email verification token
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+
+        // Create new user (unverified)
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
-            isEmailVerified: true,
-            isVerified: true
+            isEmailVerified: false,
+            isVerified: false,
+            emailVerificationToken: verificationToken
         });
 
-        // Generate Access Token (short lived)
-        const accessToken = jwt.sign(
-            { id: user._id },
-            process.env.JWT_SECRET,
-            { expiresIn: "15m" }
-        );
-
-        // Generate Refresh Token (long lived)
-        const refreshToken = jwt.sign(
-            { id: user._id },
-            process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-        );
-
-        // Set Access Token in HttpOnly Cookie
-        res.cookie("accessToken", accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 15 * 60 * 1000 // 15 mins
-        });
-
-        // Set Refresh Token in HttpOnly Cookie
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
+        // Send Verification Email
+        await sendVerificationEmail(user.email, user.name, verificationToken);
 
         res.status(201).json({
             success: true,
-            message: "User registered successfully.",
-            token: accessToken,
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email,
-                plan: user.plan,
-                role: user.role,
-            },
+            message: "Registration successful. Please check your email to verify your account.",
+            // No token is returned because they must verify first
         });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
@@ -123,6 +93,14 @@ export const login = async (req, res) => {
         // Check if user is banned
         if (user.isBanned) {
             return res.status(403).json({ message: "Your account has been suspended. Contact support for assistance." });
+        }
+
+        // Check if email is verified
+        if (!user.isEmailVerified) {
+            return res.status(403).json({ 
+                message: "Please verify your email address to log in.",
+                notVerified: true
+            });
         }
 
 
@@ -478,6 +456,62 @@ export const deleteAccount = async (req, res) => {
         });
 
         res.status(200).json({ message: "Account deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// ─── Verify Email ────────────────────────────────────────────────────────────
+export const verifyEmail = async (req, res) => {
+    try {
+        const { token } = req.params;
+
+        const user = await User.findOne({ emailVerificationToken: token });
+
+        if (!user) {
+            return res.status(400).json({ message: "Invalid or expired verification token." });
+        }
+
+        user.isEmailVerified = true;
+        user.isVerified = true;
+        user.emailVerificationToken = undefined;
+        await user.save();
+
+        res.status(200).json({ success: true, message: "Email verified successfully. You can now log in." });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+// ─── Resend Verification Email ────────────────────────────────────────────────
+export const resendVerification = async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: "Email is required." });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            // Return success even if not found to prevent email enumeration
+            return res.status(200).json({ success: true, message: "If an account exists with this email, a verification link has been sent." });
+        }
+
+        if (user.isEmailVerified) {
+            return res.status(400).json({ message: "This email is already verified. Please log in." });
+        }
+
+        // Generate new token
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+        user.emailVerificationToken = verificationToken;
+        await user.save();
+
+        // Send Email
+        await sendVerificationEmail(user.email, user.name, verificationToken);
+
+        res.status(200).json({ success: true, message: "Verification email resent. Please check your inbox." });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }

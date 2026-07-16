@@ -1,5 +1,5 @@
 import express from "express";
-import { getCurrentUser, login, logout, register, updateProfile, updatePassword, forgotPassword, resetPassword, refreshToken, deleteAccount } from "../controllers/authControllers.js";
+import { getCurrentUser, login, logout, register, updateProfile, updatePassword, forgotPassword, resetPassword, refreshToken, deleteAccount, verifyEmail, resendVerification } from "../controllers/authControllers.js";
 import auth from "../middleware/auth.js";
 import { validate, registerSchema, loginSchema, updateProfileSchema, updatePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../middleware/validations.js";
 
@@ -11,6 +11,10 @@ authRouter.post('/register', validate(registerSchema), register);
 authRouter.post('/login', validate(loginSchema), login);
 
 authRouter.post('/logout', logout);
+
+authRouter.get('/verify-email/:token', verifyEmail);
+
+authRouter.post('/resend-verification', resendVerification);
 
 authRouter.get('/refresh', refreshToken);
 

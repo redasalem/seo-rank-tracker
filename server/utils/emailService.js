@@ -118,3 +118,38 @@ export const sendInvoiceEmail = async (email, name, amount, date, plan) => {
         html
     });
 };
+
+/**
+ * Send email verification link
+ */
+export const sendVerificationEmail = async (email, name, token) => {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const verifyUrl = `${frontendUrl}/verify-email/${token}`;
+
+    const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #6366f1; margin-bottom: 5px;">RankBoost</h2>
+            </div>
+            
+            <h3 style="color: #1f2937;">Hi ${name},</h3>
+            <p style="color: #4b5563; line-height: 1.5;">Welcome to RankBoost! Please confirm your email address by clicking the button below.</p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="${verifyUrl}" style="background-color: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Verify Email</a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 13px;">If you didn't create an account, you can safely ignore this email.</p>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+            <p style="color: #9ca3af; font-size: 11px; text-align: center;">RankBoost - Track, Analyze, and Dominate SEO</p>
+        </div>
+    `;
+
+    return sendEmail({
+        to: email,
+        subject: "Confirm your RankBoost email address",
+        text: `Hi ${name}, please verify your email address by visiting this link: ${verifyUrl}`,
+        html
+    });
+};

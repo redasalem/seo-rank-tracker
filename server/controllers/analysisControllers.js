@@ -2,6 +2,7 @@ import Analysis from "../models/analysisModel.js";
 import User from "../models/User.js";
 import { runFullSEOAnalysis } from "../services/seoAnalysisService.js";
 import aiService from "../services/aiService.js";
+import { generateAnalysisPdf } from "../services/pdfService.js";
 
 // @desc    Start a new SEO analysis
 // @route   POST /api/analysis/start
@@ -178,5 +179,58 @@ export const generateAiInsights = async (req, res) => {
     } catch (error) {
         console.error("AI Generation Error:", error);
         res.status(500).json({ success: false, message: error.message || "Failed to generate AI reply" });
+    }
+};
+
+// @desc    Export analysis report as PDF
+// @route   GET /api/analysis/:id/export-pdf
+// @access  Private
+export const exportAnalysisPdf = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const language = req.query.lang || "en";
+
+        // 1. Find analysis & verify ownership
+        const analysis = await Analysis.findOne({ _id: id, userId });
+        if (!analysis) {
+            return res.status(404).json({ message: "Analysis report not found" });
+        }
+
+        // 2. Must be completed
+        if (analysis.status !== "completed") {
+            return res.status(400).json({ message: "Analysis is not completed yet. Please wait until it finishes." });
+        }
+
+        // 3. Check user plan for watermark
+        const user = await User.findById(userId);
+        const isFreePlan = !user || user.plan === "free";
+
+        // 4. Generate PDF
+        const pdfBuffer = await generateAnalysisPdf(analysis, {
+            language: ["en", "ar"].includes(language) ? language : "en",
+            isFreePlan,
+        });
+
+        // 5. Build filename
+        let domain = "report";
+        try { domain = new URL(analysis.url).hostname.replace(/[^a-zA-Z0-9.-]/g, "_"); } catch {}
+
+        // 6. Stream PDF
+        res.set({
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="RankBoost_Report_${domain}.pdf"`,
+            "Content-Length": pdfBuffer.length,
+        });
+
+        return res.send(pdfBuffer);
+    } catch (error) {
+        console.error("PDF Export Error:", error);
+
+        if (error.message?.includes("timeout") || error.message?.includes("Timeout")) {
+            return res.status(504).json({ message: "PDF generation timed out. Please try again." });
+        }
+
+        res.status(500).json({ message: "Failed to generate PDF report" });
     }
 };

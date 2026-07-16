@@ -1,5 +1,5 @@
 import express from "express";
-import { startAnalysis, getAnalysis, getUserAnalyses, generateAiInsights } from "../controllers/analysisControllers.js";
+import { startAnalysis, getAnalysis, getUserAnalyses, generateAiInsights, exportAnalysisPdf } from "../controllers/analysisControllers.js";
 import auth from "../middleware/auth.js";
 import { validate, startAnalysisSchema, mongoIdSchema } from "../middleware/validations.js";
 
@@ -12,6 +12,7 @@ analysisRouter.use(auth);
 analysisRouter.get("/", getUserAnalyses);
 analysisRouter.post("/start", validate(startAnalysisSchema), startAnalysis);
 analysisRouter.get("/:id", validate(mongoIdSchema, "params"), getAnalysis);
+analysisRouter.get("/:id/export-pdf", validate(mongoIdSchema, "params"), exportAnalysisPdf);
 analysisRouter.post("/:id/ai-chat", validate(mongoIdSchema, "params"), generateAiInsights);
 
 export default analysisRouter;
