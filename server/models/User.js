@@ -17,6 +17,9 @@ const userSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false },
     emailVerificationToken: { type: String, default: null },
     isBanned: { type: Boolean, default: false },
+    reportFrequency: { type: String, enum: ["weekly", "monthly", "off"], default: "off" },
+    lastReportSentDate: { type: Date, default: null },
+    language: { type: String, enum: ["en", "ar"], default: "en" },
 
 },{timestamps:true})
 

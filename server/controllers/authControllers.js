@@ -145,6 +145,8 @@ export const login = async (req, res) => {
                 plan: user.plan,
                 role: user.role,
                 analysisCount: user.analysisCount,
+                reportFrequency: user.reportFrequency,
+                language: user.language,
             },
         });
     } catch (error) {
@@ -196,7 +198,7 @@ export const logout = async (req, res) => {
 // ─── Update Profile ──────────────────────────────────────────────────────────
 export const updateProfile = async (req, res) => {
     try {
-        const { name, email } = req.body;
+        const { name, email, reportFrequency, language } = req.body;
         const userId = req.user.id;
 
         if (!name || !email) {
@@ -220,9 +222,19 @@ export const updateProfile = async (req, res) => {
             return res.status(409).json({ message: "Email is already in use by another account" });
         }
 
+        const currentUser = await User.findById(userId);
+        if (!currentUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        let newFrequency = reportFrequency || currentUser.reportFrequency || "off";
+        if (currentUser.plan === "free" && newFrequency === "monthly") {
+            return res.status(400).json({ message: "Monthly reports are only available on Pro or Max plans." });
+        }
+
         const user = await User.findByIdAndUpdate(
             userId,
-            { name, email },
+            { name, email, reportFrequency: newFrequency, language: language || currentUser.language || "en" },
             { new: true, runValidators: true }
         ).select("-password");
 
@@ -239,6 +251,8 @@ export const updateProfile = async (req, res) => {
                 plan: user.plan,
                 role: user.role,
                 analysisCount: user.analysisCount,
+                reportFrequency: user.reportFrequency,
+                language: user.language,
             }
         });
     } catch (error) {
@@ -397,7 +411,8 @@ export const refreshToken = async (req, res) => {
                 email: user.email,
                 plan: user.plan,
                 role: user.role,
-                analysisCount: user.analysisCount
+                analysisCount: user.analysisCount,
+                reportFrequency: user.reportFrequency
             }
         });
 

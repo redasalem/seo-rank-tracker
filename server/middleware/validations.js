@@ -102,6 +102,8 @@ export const updateProfileSchema = z.object({
         .trim()
         .email("Please provide a valid email address")
         .toLowerCase(),
+    reportFrequency: z.enum(["weekly", "monthly", "off"]).optional(),
+    language: z.enum(["en", "ar"]).optional(),
 });
 
 export const updatePasswordSchema = z.object({

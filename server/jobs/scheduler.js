@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import KeywordTracking from "../models/keywordTracking.js";
 import { processAllPendingKeywords } from "../services/keywordTrackingService.js";
+import { sendDuePeriodicReports } from "../services/reportService.js";
 
 // ─── تحديث يومي لجميع الكلمات المفتاحية ──────────────────────────────────
 // يعمل كل يوم الساعة 3 الفجر (وقت قليل الضغط على السيرفر)
@@ -30,4 +31,14 @@ export function startCronJobs() {
     });
 
     console.log("🕐 Cron job scheduled: Daily rank update at 3:00 AM");
+
+    // ─── إرسال التقارير الدورية عبر البريد ──────────────────────────────────
+    // يعمل كل يوم الساعة 8 صباحاً بتوقيت الخادم (UTC)
+    cron.schedule("0 8 * * *", async () => {
+        console.log("⏰ [CRON] Periodic email reports started...");
+        await sendDuePeriodicReports();
+        console.log("✅ [CRON] Periodic email reports completed!");
+    });
+
+    console.log("🕐 Cron job scheduled: Periodic email reports at 8:00 AM");
 }
