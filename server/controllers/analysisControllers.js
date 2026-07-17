@@ -1,5 +1,6 @@
 import Analysis from "../models/analysisModel.js";
 import User from "../models/User.js";
+import Settings from "../models/Settings.js";
 import { runFullSEOAnalysis } from "../services/seoAnalysisService.js";
 import aiService from "../services/aiService.js";
 import { generateAnalysisPdf } from "../services/pdfService.js";
@@ -31,9 +32,20 @@ export const startAnalysis = async (req, res) => {
         }
 
         // Check limits based on plan
-        const planLimits = { free: 5, pro: 20, max: 60 };
-        const limit = planLimits[user.plan] || 5;
-        if (user.analysisCount >= limit) {
+        let limit = user.plan === "free" ? 5 : user.plan === "pro" ? 20 : 60;
+        try {
+            const planLimitsDoc = await Settings.findOne({ key: "planLimits" });
+            if (planLimitsDoc && planLimitsDoc.value && planLimitsDoc.value[user.plan]) {
+                const dbLimit = planLimitsDoc.value[user.plan].analyses;
+                if (dbLimit !== undefined && dbLimit !== null) {
+                    limit = dbLimit;
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch planLimits setting:", err.message);
+        }
+
+        if (limit !== -1 && user.analysisCount >= limit) {
             return res.status(403).json({ 
                 message: `You have reached your daily limit of ${limit} analyses on the ${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} plan. Please upgrade for more.`
             });

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import KeywordTracking from "../models/keywordTracking.js";
 import User from "../models/User.js";
 import Analysis from "../models/analysisModel.js";
+import Settings from "../models/Settings.js";
 import { processSingleKeyword } from "../services/keywordTrackingService.js";
 
 // Add a new keyword for tracking
@@ -42,13 +43,25 @@ export const addKeyword = async (req, res) => {
         const user = await User.findById(userId);
         if (user) {
             const count = await KeywordTracking.countDocuments({ userId });
-            const limits = { free: 5, pro: 50, max: 200 };
-            const limit = limits[user.plan] || 5;
             
-            if (count >= limit) {
+            // Centralized DB-driven limit lookup with hardcoded fallbacks
+            let limit = user.plan === "free" ? 5 : user.plan === "pro" ? 50 : 200;
+            try {
+                const planLimitsDoc = await Settings.findOne({ key: "planLimits" });
+                if (planLimitsDoc && planLimitsDoc.value && planLimitsDoc.value[user.plan]) {
+                    const dbLimit = planLimitsDoc.value[user.plan].keywords;
+                    if (dbLimit !== undefined && dbLimit !== null) {
+                        limit = dbLimit;
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch planLimits setting:", err.message);
+            }
+            
+            if (limit !== -1 && count >= limit) {
                 const nextPlan = user.plan === "free" ? "Pro" : "Max";
                 const message = user.plan === "max" 
-                    ? "You have reached the maximum limit of 200 keywords on the Max plan."
+                    ? `You have reached the maximum limit of ${limit} keywords on the Max plan.`
                     : `You have reached your limit of ${limit} keywords on the ${user.plan.charAt(0).toUpperCase() + user.plan.slice(1)} plan. Please upgrade to ${nextPlan}.`;
                 
                 return res.status(403).json({ message });
