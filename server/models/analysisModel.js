@@ -83,6 +83,31 @@ const analysisSchema = new mongoose.Schema({
         schemaTypes: [{ type: String }]
     },
     
+    // Google Lighthouse (PageSpeed Insights) Data
+    lighthouse: {
+        performance: { type: Number, default: null },
+        accessibility: { type: Number, default: null },
+        bestPractices: { type: Number, default: null },
+        seo: { type: Number, default: null },
+        metrics: {
+            fcp: { type: Number },    // First Contentful Paint (ms)
+            lcp: { type: Number },    // Largest Contentful Paint (ms)
+            tbt: { type: Number },    // Total Blocking Time (ms)
+            cls: { type: Number },    // Cumulative Layout Shift
+            si: { type: Number },     // Speed Index (ms)
+            tti: { type: Number },    // Time to Interactive (ms)
+        },
+        audits: [{
+            id: String,
+            title: String,
+            description: String,
+            score: Number,
+            scoreDisplayMode: String,
+            displayValue: String,
+            category: String,
+        }]
+    },
+    
     // Detected Issues
     issues: [issueSchema],
     

@@ -2,6 +2,7 @@ import Analysis from "../models/analysisModel.js";
 import https from "https";
 import axios from "axios";
 import * as cheerio from "cheerio";
+import { runPageSpeedAnalysis } from "./pageSpeedService.js";
 
 // ─── فحص شهادة الأمان (SSL) ────────────────────────────────────────────────
 async function checkSSL(url) {
@@ -316,11 +317,15 @@ export async function runFullSEOAnalysis(analysisId) {
         // Load HTML into Cheerio
         const $ = cheerio.load(html);
 
-        // 2. Extract Data & Run External Checks in Parallel
-        const [extractedData, sslInfo, filesInfo] = await Promise.all([
+        // 2. Extract Data & Run External Checks in Parallel (including PageSpeed)
+        const [extractedData, sslInfo, filesInfo, lighthouseData] = await Promise.all([
             Promise.resolve(extractPageData($, analysis.url)),
             checkSSL(analysis.url),
-            checkFiles(analysis.url)
+            checkFiles(analysis.url),
+            runPageSpeedAnalysis(analysis.url).catch(err => {
+                console.warn("⚠️ PageSpeed analysis failed, continuing without it:", err.message);
+                return null;
+            })
         ]);
 
         // 2.5 Extract Advanced SEO
@@ -344,6 +349,7 @@ export async function runFullSEOAnalysis(analysisId) {
             categories,
             overallScore,
             issues,
+            ...(lighthouseData && { lighthouse: lighthouseData }),
             status: "completed"
         });
 
