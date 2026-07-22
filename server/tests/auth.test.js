@@ -98,15 +98,24 @@ describe('Auth Endpoints', () => {
     });
 
     it('should login an existing verified user', async () => {
-        // Register user via magic link
-        await request(app).post('/api/auth/request-registration').send({ email: testUser.email });
-        const regToken = await RegistrationToken.findOne({ email: testUser.email });
-        await request(app).post('/api/auth/complete-registration').send({
-            token: regToken.token,
+        // Step 1: Create user with email verification token directly in DB
+        const bcrypt = (await import('bcrypt')).default;
+        const hashedPassword = await bcrypt.hash(testUser.password, 10);
+        const user = await User.create({
             name: testUser.name,
-            password: testUser.password
+            email: testUser.email,
+            password: hashedPassword,
+            isEmailVerified: false,
+            isVerified: false,
+            emailVerificationToken: 'verify-token-login-test'
         });
 
+        // Step 2: Verify user email via token endpoint GET /api/auth/verify-email/:token
+        const verifyRes = await request(app)
+            .get(`/api/auth/verify-email/${user.emailVerificationToken}`);
+        expect(verifyRes.statusCode).toEqual(200);
+
+        // Step 3: Login
         const res = await request(app)
             .post('/api/auth/login')
             .send({
@@ -125,13 +134,19 @@ describe('Auth Endpoints', () => {
     });
 
     it('should not login with wrong password', async () => {
-        await request(app).post('/api/auth/request-registration').send({ email: testUser.email });
-        const regToken = await RegistrationToken.findOne({ email: testUser.email });
-        await request(app).post('/api/auth/complete-registration').send({
-            token: regToken.token,
+        const bcrypt = (await import('bcrypt')).default;
+        const hashedPassword = await bcrypt.hash(testUser.password, 10);
+        const user = await User.create({
             name: testUser.name,
-            password: testUser.password
+            email: testUser.email,
+            password: hashedPassword,
+            isEmailVerified: false,
+            isVerified: false,
+            emailVerificationToken: 'verify-token-wrong-pass'
         });
+
+        // Verify email first
+        await request(app).get(`/api/auth/verify-email/${user.emailVerificationToken}`);
 
         const res = await request(app)
             .post('/api/auth/login')
