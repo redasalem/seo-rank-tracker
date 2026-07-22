@@ -66,15 +66,19 @@ export const validate = (schema, source = "body") => {
 // ─── Auth Schemas ───────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════════
 
-export const registerSchema = z.object({
-    name: z.string({ required_error: "Name is required" })
-        .trim()
-        .min(2, "Name must be at least 2 characters")
-        .max(50, "Name must be at most 50 characters"),
+export const requestRegistrationSchema = z.object({
     email: z.string({ required_error: "Email is required" })
         .trim()
         .email("Please provide a valid email address")
         .toLowerCase(),
+});
+
+export const completeRegistrationSchema = z.object({
+    token: z.string({ required_error: "Token is required" }).trim(),
+    name: z.string({ required_error: "Name is required" })
+        .trim()
+        .min(2, "Name must be at least 2 characters")
+        .max(50, "Name must be at most 50 characters"),
     password: z.string({ required_error: "Password is required" })
         .min(8, "Password must be at least 8 characters")
         .regex(/[A-Z]/, "Must contain at least one uppercase letter")

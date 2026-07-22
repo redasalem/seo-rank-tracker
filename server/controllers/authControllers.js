@@ -3,34 +3,23 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Stripe from "stripe";
 import User from "../models/User.js";
-import { sendEmail, sendVerificationEmail } from "../utils/emailService.js";
+import RegistrationToken from "../models/RegistrationToken.js";
+import { sendEmail, sendVerificationEmail, sendMagicLinkEmail } from "../utils/emailService.js";
 import KeywordTracking from "../models/keywordTracking.js";
 import Analysis from "../models/analysisModel.js";
 import Notification from "../models/Notification.js";
-// ─── Register ────────────────────────────────────────────────────────────────
-export const register = async (req, res) => {
+// ─── Magic Link Registration ────────────────────────────────────────────────
+export const requestRegistration = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
+        const { email } = req.body;
 
-        // Validate required fields
-        if (!name || !email || !password) {
-            return res.status(400).json({ message: "All fields are required" });
+        if (!email) {
+            return res.status(400).json({ message: "Email is required" });
         }
 
-        // Strict Name Validation
-        if (name.trim().length < 3) {
-            return res.status(400).json({ message: "Name must be at least 3 characters long" });
-        }
-
-        // Strict Email Validation (Prevent r@gmail.com by requiring min prefix length)
         const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ message: "Please enter a valid and secure email address." });
-        }
-
-        // Strict Password Validation
-        if (password.length < 6) {
-            return res.status(400).json({ message: "Password must be at least 6 characters long" });
         }
 
         // Check if user already exists
@@ -39,31 +28,98 @@ export const register = async (req, res) => {
             return res.status(400).json({ message: "User already exists" });
         }
 
+        // Generate magic link token
+        const token = crypto.randomBytes(32).toString("hex");
+
+        // Save token to DB
+        await RegistrationToken.findOneAndUpdate(
+            { email },
+            { token, createdAt: Date.now() },
+            { upsert: true, new: true }
+        );
+
+        // Send Magic Link Email
+        await sendMagicLinkEmail(email, token);
+
+        res.status(200).json({
+            success: true,
+            message: "Registration link sent. Please check your email.",
+        });
+    } catch (error) {
+        console.error("Error requesting registration:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+export const completeRegistration = async (req, res) => {
+    try {
+        const { token, name, password } = req.body;
+
+        if (!token || !name || !password) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        // Strict Name Validation
+        if (name.trim().length < 3) {
+            return res.status(400).json({ message: "Name must be at least 3 characters long" });
+        }
+
+        // Strict Password Validation
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        }
+
+        // Find token record
+        const tokenRecord = await RegistrationToken.findOne({ token });
+        if (!tokenRecord) {
+            return res.status(400).json({ message: "Invalid or expired registration link. Please try again." });
+        }
+
+        const email = tokenRecord.email;
+
+        // Check again if user exists just in case
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            await RegistrationToken.deleteOne({ token });
+            return res.status(400).json({ message: "User already exists" });
+        }
+
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Generate email verification token
-        const verificationToken = crypto.randomBytes(32).toString("hex");
-
-        // Create new user (unverified)
+        // Create user
         const user = await User.create({
             name,
             email,
             password: hashedPassword,
-            isEmailVerified: false,
-            isVerified: false,
-            emailVerificationToken: verificationToken
+            isEmailVerified: true,
+            isVerified: true
         });
 
-        // Send Verification Email
-        await sendVerificationEmail(user.email, user.name, verificationToken);
+        // Delete the used token
+        await RegistrationToken.deleteOne({ token });
+
+        // Auto login
+        const authToken = jwt.sign(
+            { id: user._id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
 
         res.status(201).json({
             success: true,
-            message: "Registration successful. Please check your email to verify your account.",
-            // No token is returned because they must verify first
+            message: "Registration complete",
+            token: authToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                plan: user.plan
+            }
         });
     } catch (error) {
+        console.error("Error completing registration:", error);
         res.status(500).json({ message: "Server error" });
     }
 };

@@ -325,3 +325,38 @@ export const sendPeriodicReportEmail = async (user, stats, keywordDetails = []) 
         html
     });
 };
+
+/**
+ * Send Magic Link for Registration
+ */
+export const sendMagicLinkEmail = async (email, token) => {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const magicUrl = \`\${frontendUrl}/register/complete?token=\${token}\`;
+
+    const html = \`
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #6366f1; margin-bottom: 5px;">RankBoost</h2>
+            </div>
+            
+            <h3 style="color: #1f2937;">Complete Your Registration</h3>
+            <p style="color: #4b5563; line-height: 1.5;">You're almost there! Click the button below to verify your email and complete your RankBoost registration.</p>
+            
+            <div style="text-align: center; margin: 35px 0;">
+                <a href="\${magicUrl}" style="background-color: #6366f1; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">Verify & Complete Registration</a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 13px;">This link is valid for 1 hour. If you didn't request this, you can safely ignore this email.</p>
+            
+            <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 20px 0;" />
+            <p style="color: #9ca3af; font-size: 11px; text-align: center;">RankBoost - Track, Analyze, and Dominate SEO</p>
+        </div>
+    \`;
+
+    return sendEmail({
+        to: email,
+        subject: "Complete your RankBoost Registration",
+        text: \`Please verify your email and complete registration by visiting this link: \${magicUrl}\`,
+        html
+    });
+};
