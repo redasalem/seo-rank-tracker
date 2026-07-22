@@ -29,6 +29,7 @@
 
 - **📊 Keyword Rank Tracking** — Track your website's position for specific keywords across Google search results.
 - **🔍 Deep SEO Analysis** — Analyze any URL for meta tags, headings, images, links, performance, SSL, robots.txt, and more.
+- **⚡ Google Lighthouse Integration** — Real performance data, Core Web Vitals, and detailed audits powered by PageSpeed Insights API.
 - **📈 Historical Data & Charts** — View ranking history over time with interactive charts.
 - **🏆 Competitor Monitoring** — See which competitors rank for the same keywords and how they compare.
 - **🔔 Smart Notifications** — Get notified when your rankings improve or drop.
@@ -129,6 +130,7 @@ npm run dev       # Starts on http://localhost:5173
 | `JWT_SECRET` | Secret for JWT access tokens | ✅ |
 | `REFRESH_TOKEN_SECRET` | Secret for JWT refresh tokens | ✅ |
 | `BROWSERBASE_API_KEY` | Browserbase API key for scraping | ✅ |
+| `PAGESPEED_API_KEY` | Google PageSpeed Insights API key for Lighthouse analysis | ✅ |
 | `FRONTEND_URL` | Frontend URL for CORS & email links | ✅ |
 | `CRON_SECRET` | Secret for Vercel Cron authentication | ✅ |
 | `STRIPE_SECRET_KEY` | Stripe secret key | ❌ |

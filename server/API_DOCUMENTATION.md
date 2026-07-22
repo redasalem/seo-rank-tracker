@@ -44,7 +44,7 @@ Authorization: Bearer <your_jwt_token_here>
 
 - `POST /api/analysis/start` - بدء فحص وتقييم موقع (يحتاج: `url`)
 - `GET /api/analysis` - جلب سجل وفحوصات الموقع السابقة الخاصة بالمستخدم
-- `GET /api/analysis/:id` - جلب التقرير المفصل للفحص بالـ ID
+- `GET /api/analysis/:id` - جلب التقرير المفصل للفحص بالـ ID (يحتوي التقرير على فحص السيو الداخلي بالإضافة إلى بيانات الأداء من **Google PageSpeed Insights API**)
 
 ---
 
