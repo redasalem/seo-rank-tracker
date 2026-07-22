@@ -34,6 +34,8 @@ Context about the user's website:
 - URL: ${analysis.url}
 - Overall Score: ${analysis.overallScore}/100
 - Performance: Load Time ${analysis.loadTime}ms, Page Size ${analysis.pageSize}KB
+${analysis.lighthouse ? `- Lighthouse Scores: Performance ${analysis.lighthouse.performance}, Accessibility ${analysis.lighthouse.accessibility}, Best Practices ${analysis.lighthouse.bestPractices}, SEO ${analysis.lighthouse.seo}
+- Core Web Vitals: FCP ${analysis.lighthouse.metrics?.fcp}ms, LCP ${analysis.lighthouse.metrics?.lcp}ms, CLS ${analysis.lighthouse.metrics?.cls}` : ''}
 - Total Issues: ${analysis.issues.length}
 - Top Issues: ${JSON.stringify(analysis.issues.map(i => i.message).slice(0, 3))}
 `.trim();
