@@ -181,7 +181,6 @@ describe('Auth Endpoints', () => {
         expect(res.statusCode).toEqual(403);
         expect(res.body.notVerified).toBe(true);
     });
-<<<<<<< HEAD
 
     it('should register a new user directly', async () => {
         const res = await request(app)
@@ -199,6 +198,4 @@ describe('Auth Endpoints', () => {
         expect(createdUser).toBeTruthy();
         expect(createdUser.name).toBe('Direct User');
     });
-=======
->>>>>>> a8b6a3d3df0a501c22c709569f853b29bff9b9b3
 });

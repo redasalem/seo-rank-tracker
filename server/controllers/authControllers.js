@@ -266,8 +266,6 @@ export const login = async (req, res) => {
         // Check if user is banned
         if (user.isBanned) {
             return res.status(403).json({ message: "Your account has been suspended. Contact support for assistance." });
-<<<<<<< HEAD
-=======
         }
 
         // Auto-verify if SMTP is unconfigured so users are never locked out
@@ -275,7 +273,6 @@ export const login = async (req, res) => {
             user.isEmailVerified = true;
             user.isVerified = true;
             await user.save();
->>>>>>> a8b6a3d3df0a501c22c709569f853b29bff9b9b3
         }
 
         // Check if email is verified
