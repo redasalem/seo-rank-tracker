@@ -8,13 +8,26 @@ export async function searchGoogle(keyword, country = "us") {
         throw new Error("SERPAPI_API_KEY is not configured. Please add it to your environment variables.");
     }
 
-    console.log(`  🔗 SerpApi search: "${keyword}" (country: ${country})`);
+    // Map country code to the correct language for accurate SERP results
+    const countryLanguageMap = {
+        "us": "en", "gb": "en", "ca": "en", "au": "en",
+        "eg": "ar", "sa": "ar", "ae": "ar", "kw": "ar",
+        "jo": "ar", "lb": "ar", "ma": "ar", "dz": "ar",
+        "fr": "fr", "de": "de", "es": "es", "it": "it",
+        "br": "pt", "pt": "pt", "ru": "ru", "tr": "tr",
+        "in": "hi", "pk": "ur", "bd": "bn", "cn": "zh-cn",
+        "jp": "ja", "kr": "ko"
+    };
+
+    const hl = countryLanguageMap[country?.toLowerCase()] || "en";
+
+    console.log(`  🔗 SerpApi search: "${keyword}" (country: ${country}, lang: ${hl})`);
 
     const response = await axios.get("https://serpapi.com/search.json", {
         params: {
             q: keyword,
             gl: country.toLowerCase(),
-            hl: "en",
+            hl: hl,
             num: 50,
             engine: "google",
             api_key: apiKey,
