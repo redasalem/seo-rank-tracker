@@ -19,6 +19,20 @@ const isSmtpConfigured = () => {
     return true;
 };
 
+// List of common disposable and fake email domains
+const BANNED_DOMAINS = [
+    "yopmail.com", "mailinator.com", "guerrillamail.com", "10minutemail.com",
+    "temp-mail.org", "tempmail.com", "throwawaymail.com", "sharklasers.com",
+    "guerrillamail.net", "guerrillamail.biz", "spam4.me", "dispostable.com",
+    "test.com", "example.com", "asdf.com", "fake.com", "admin.com"
+];
+
+const isValidEmailDomain = (email) => {
+    const domain = email.split("@")[1]?.toLowerCase();
+    if (!domain) return false;
+    return !BANNED_DOMAINS.includes(domain);
+};
+
 // ─── Direct Registration (1-Step Account Creation) ─────────────────────────
 export const register = async (req, res) => {
     try {
@@ -39,6 +53,10 @@ export const register = async (req, res) => {
         const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ message: "Please enter a valid email address." });
+        }
+
+        if (!isValidEmailDomain(email)) {
+            return res.status(400).json({ message: "Disposable or fake email addresses are not allowed." });
         }
 
         // Check if user already exists
@@ -137,6 +155,10 @@ export const requestRegistration = async (req, res) => {
         const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ message: "Please enter a valid and secure email address." });
+        }
+
+        if (!isValidEmailDomain(email)) {
+            return res.status(400).json({ message: "Disposable or fake email addresses are not allowed." });
         }
 
         // Check if user already exists
