@@ -1,11 +1,11 @@
 import express from "express";
-import { getCurrentUser, login, logout, requestRegistration, completeRegistration, updateProfile, updatePassword, forgotPassword, resetPassword, refreshToken, deleteAccount, verifyEmail, resendVerification } from "../controllers/authControllers.js";
+import { getCurrentUser, register, login, logout, requestRegistration, completeRegistration, updateProfile, updatePassword, forgotPassword, resetPassword, refreshToken, deleteAccount, verifyEmail, resendVerification } from "../controllers/authControllers.js";
 import auth from "../middleware/auth.js";
-import { validate, requestRegistrationSchema, completeRegistrationSchema, loginSchema, updateProfileSchema, updatePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../middleware/validations.js";
+import { validate, registerSchema, requestRegistrationSchema, completeRegistrationSchema, loginSchema, updateProfileSchema, updatePasswordSchema, forgotPasswordSchema, resetPasswordSchema } from "../middleware/validations.js";
 
 const authRouter = express.Router();
 
-
+authRouter.post('/register', validate(registerSchema), register);
 authRouter.post('/request-registration', validate(requestRegistrationSchema), requestRegistration);
 authRouter.post('/complete-registration', validate(completeRegistrationSchema), completeRegistration);
 

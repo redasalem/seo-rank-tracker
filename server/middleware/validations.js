@@ -66,6 +66,20 @@ export const validate = (schema, source = "body") => {
 // ─── Auth Schemas ───────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════════
 
+export const registerSchema = z.object({
+    name: z.string({ required_error: "Name is required" })
+        .trim()
+        .min(2, "Name must be at least 2 characters")
+        .max(50, "Name must be at most 50 characters"),
+    email: z.string({ required_error: "Email is required" })
+        .trim()
+        .email("Please provide a valid email address")
+        .toLowerCase(),
+    password: z.string({ required_error: "Password is required" })
+        .min(6, "Password must be at least 6 characters")
+        .max(128, "Password must be at most 128 characters"),
+});
+
 export const requestRegistrationSchema = z.object({
     email: z.string({ required_error: "Email is required" })
         .trim()
@@ -80,11 +94,7 @@ export const completeRegistrationSchema = z.object({
         .min(2, "Name must be at least 2 characters")
         .max(50, "Name must be at most 50 characters"),
     password: z.string({ required_error: "Password is required" })
-        .min(8, "Password must be at least 8 characters")
-        .regex(/[A-Z]/, "Must contain at least one uppercase letter")
-        .regex(/[a-z]/, "Must contain at least one lowercase letter")
-        .regex(/[0-9]/, "Must contain at least one number")
-        .regex(/[^A-Za-z0-9]/, "Must contain at least one special character")
+        .min(6, "Password must be at least 6 characters")
         .max(128, "Password must be at most 128 characters"),
 });
 

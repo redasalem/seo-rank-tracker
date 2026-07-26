@@ -8,6 +8,123 @@ import { sendEmail, sendVerificationEmail, sendMagicLinkEmail } from "../utils/e
 import KeywordTracking from "../models/keywordTracking.js";
 import Analysis from "../models/analysisModel.js";
 import Notification from "../models/Notification.js";
+// Helper to check if SMTP is configured with real credentials
+const isSmtpConfigured = () => {
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+
+    if (!smtpHost || !smtpUser || !smtpPass) return false;
+    if (smtpUser.includes("your_email") || smtpPass.includes("your_app_password")) return false;
+    return true;
+};
+
+// ─── Direct Registration (1-Step Account Creation) ─────────────────────────
+export const register = async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "Name, email, and password are required" });
+        }
+
+        if (name.trim().length < 2) {
+            return res.status(400).json({ message: "Name must be at least 2 characters long" });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long" });
+        }
+
+        const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Please enter a valid email address." });
+        }
+
+        // Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists with this email address" });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const hasSmtp = isSmtpConfigured();
+
+        // Create user (Auto-verify if SMTP is unconfigured so sign-up is not blocked)
+        const user = await User.create({
+            name: name.trim(),
+            email: email.toLowerCase().trim(),
+            password: hashedPassword,
+            isEmailVerified: !hasSmtp,
+            isVerified: !hasSmtp
+        });
+
+        // Send verification email if SMTP is enabled
+        if (hasSmtp) {
+            const verificationToken = crypto.randomBytes(32).toString("hex");
+            user.emailVerificationToken = verificationToken;
+            await user.save();
+
+            sendVerificationEmail(user.email, user.name, verificationToken).catch(err => {
+                console.error("Failed to send verification email:", err.message);
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: "Registration successful. Please check your email to verify your account.",
+                notVerified: true
+            });
+        }
+
+        // Auto login if SMTP is not configured
+        const accessToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: "15m" }
+        );
+
+        const refreshToken = jwt.sign(
+            { id: user._id },
+            process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.status(201).json({
+            success: true,
+            message: "Account created successfully",
+            token: accessToken,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                plan: user.plan,
+                role: user.role,
+                analysisCount: user.analysisCount,
+                reportFrequency: user.reportFrequency,
+                language: user.language
+            }
+        });
+    } catch (error) {
+        console.error("Error registering user:", error);
+        res.status(500).json({ message: "Server error during registration" });
+    }
+};
+
 // ─── Magic Link Registration ────────────────────────────────────────────────
 export const requestRegistration = async (req, res) => {
     try {
@@ -149,6 +266,13 @@ export const login = async (req, res) => {
         // Check if user is banned
         if (user.isBanned) {
             return res.status(403).json({ message: "Your account has been suspended. Contact support for assistance." });
+        }
+
+        // Auto-verify if SMTP is unconfigured so users are never locked out
+        if (!user.isEmailVerified && !isSmtpConfigured()) {
+            user.isEmailVerified = true;
+            user.isVerified = true;
+            await user.save();
         }
 
         // Check if email is verified
