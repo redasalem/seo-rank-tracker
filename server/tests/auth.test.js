@@ -159,7 +159,7 @@ describe('Auth Endpoints', () => {
         expect(res.body.message).toBe('Invalid credentials');
     });
 
-    it('should not login if email is unverified', async () => {
+    it('should auto-verify and login if SMTP is not configured', async () => {
         const bcrypt = (await import('bcrypt')).default;
         const hashedPassword = await bcrypt.hash(testUser.password, 10);
         
@@ -178,8 +178,14 @@ describe('Auth Endpoints', () => {
                 password: testUser.password
             });
 
-        expect(res.statusCode).toEqual(403);
-        expect(res.body.notVerified).toBe(true);
+        // When SMTP is not configured, unverified users are auto-verified at login
+        expect(res.statusCode).toEqual(200);
+        expect(res.body.success).toBe(true);
+
+        // Verify the user was auto-verified in the database
+        const updatedUser = await User.findOne({ email: testUser.email });
+        expect(updatedUser.isEmailVerified).toBe(true);
+        expect(updatedUser.isVerified).toBe(true);
     });
 
     it('should register a new user directly', async () => {
