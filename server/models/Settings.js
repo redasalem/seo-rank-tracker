@@ -10,7 +10,7 @@ const Settings = mongoose.model("Settings", settingsSchema);
 // Default settings to seed if not present
 Settings.seedDefaults = async () => {
     const defaults = [
-        { key: "planLimits", value: { free: { analyses: 5, keywords: 3 }, pro: { analyses: 50, keywords: 25 }, max: { analyses: -1, keywords: -1 } } },
+        { key: "planLimits", value: { free: { analyses: 3, keywords: 5 }, pro: { analyses: 20, keywords: 50 }, max: { analyses: 60, keywords: 200 } } },
         { key: "maintenanceMode", value: false }
     ];
     for (const d of defaults) {

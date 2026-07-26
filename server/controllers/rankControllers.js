@@ -299,7 +299,7 @@ export const getDashboardStats = async (req, res) => {
                 analysisLimit: user ? {
                     plan: user.plan,
                     used: todayAnalysisCount,
-                    max: user.plan === 'free' ? 5 : user.plan === 'pro' ? 20 : 60
+                    max: user.plan === 'free' ? 3 : user.plan === 'pro' ? 20 : 60
                 } : null
             }
         });

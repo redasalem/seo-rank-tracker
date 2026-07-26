@@ -32,7 +32,7 @@ export const startAnalysis = async (req, res) => {
         }
 
         // Check limits based on plan
-        let limit = user.plan === "free" ? 5 : user.plan === "pro" ? 20 : 60;
+        let limit = user.plan === "free" ? 3 : user.plan === "pro" ? 20 : 60;
         try {
             const planLimitsDoc = await Settings.findOne({ key: "planLimits" });
             if (planLimitsDoc && planLimitsDoc.value && planLimitsDoc.value[user.plan]) {

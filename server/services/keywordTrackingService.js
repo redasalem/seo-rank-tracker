@@ -69,6 +69,11 @@ function updateKeywordData(tracking, found, competitors) {
             url: found.url,
             snippet: found.snippet,
         });
+
+        // Cap rankHistory to last 90 entries to prevent document bloat
+        if (tracking.rankHistory.length > 90) {
+            tracking.rankHistory = tracking.rankHistory.slice(-90);
+        }
     } else {
         tracking.currentPosition = null;
         tracking.currentPage = null;
