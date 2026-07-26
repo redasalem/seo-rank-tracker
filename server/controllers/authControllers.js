@@ -268,13 +268,6 @@ export const login = async (req, res) => {
             return res.status(403).json({ message: "Your account has been suspended. Contact support for assistance." });
         }
 
-        // Auto-verify if SMTP is unconfigured so users are never locked out
-        if (!user.isEmailVerified && !isSmtpConfigured()) {
-            user.isEmailVerified = true;
-            user.isVerified = true;
-            await user.save();
-        }
-
         // Check if email is verified
         if (!user.isEmailVerified) {
             return res.status(403).json({ 

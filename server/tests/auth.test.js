@@ -181,4 +181,21 @@ describe('Auth Endpoints', () => {
         expect(res.statusCode).toEqual(403);
         expect(res.body.notVerified).toBe(true);
     });
+
+    it('should register a new user directly', async () => {
+        const res = await request(app)
+            .post('/api/auth/register')
+            .send({
+                name: 'Direct User',
+                email: 'directuser@example.com',
+                password: 'Password123!'
+            });
+
+        expect(res.statusCode).toEqual(201);
+        expect(res.body.success).toBe(true);
+
+        const createdUser = await User.findOne({ email: 'directuser@example.com' });
+        expect(createdUser).toBeTruthy();
+        expect(createdUser.name).toBe('Direct User');
+    });
 });
