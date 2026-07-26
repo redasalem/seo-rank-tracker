@@ -9,10 +9,10 @@ if (process.env.STRIPE_SECRET_KEY) {
     console.warn("⚠️ STRIPE_SECRET_KEY is not defined. Payments and subscriptions will not work.");
 }
 
-// Price IDs for each plan
+// Price IDs for each plan (Can be overridden via Vercel Environment Variables)
 const PRICE_IDS = {
-    pro: "price_1TsRNeAOKi6yj1rDLAvSnk3z",
-    max: "price_1TsRRfAOKi6yj1rDYOCUn7BR"
+    pro: process.env.STRIPE_PRO_PRICE_ID || "price_1TsRNeAOKi6yj1rDLAvSnk3z",
+    max: process.env.STRIPE_MAX_PRICE_ID || "price_1TsRRfAOKi6yj1rDYOCUn7BR"
 };
 
 // @desc    Create Stripe Checkout Session for Pro or Max plan
