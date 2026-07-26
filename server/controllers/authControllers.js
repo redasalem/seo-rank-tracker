@@ -160,6 +160,10 @@ export const login = async (req, res) => {
         }
 
 
+        // Update last login timestamp
+        user.lastLoginAt = new Date();
+        await user.save();
+
         // Generate Access Token (short lived)
         const accessToken = jwt.sign(
             { id: user._id },

@@ -1,6 +1,8 @@
 import KeywordTracking from "../models/keywordTracking.js";
+import User from "../models/User.js";
 import { searchGoogle } from "./rankTrackerService.js";
 import { createNotification } from "./notificationService.js";
+import { sendRankChangeEmail } from "../utils/emailTemplates.js";
 
 // ─── تحليل النتائج: إيجاد موقع المستخدم + المنافسين ──────────────────────
 function analyzeResults(results, targetDomain) {
@@ -132,6 +134,22 @@ async function processOneKeyword(tracking) {
                 type: rankAlert.type,
                 link: `/rank/${tracking._id}` 
             });
+
+            // Trigger rank change email if keyword moved 5+ positions
+            const changeAmount = tracking.positionChange;
+            if (changeAmount >= 5 || changeAmount <= -5) {
+                const changeType = changeAmount >= 5 ? "improved" : "dropped";
+                const oldPos = rankAlert.oldPos || (found ? found.position + changeAmount : Math.abs(changeAmount));
+                const newPos = found ? found.position : 0;
+
+                User.findById(tracking.userId).then(user => {
+                    if (user && user.email) {
+                        sendRankChangeEmail(user, tracking, oldPos, newPos, changeType).catch(err => {
+                            console.error("Failed to send rank change email:", err.message);
+                        });
+                    }
+                }).catch(err => console.error("Error fetching user for rank change email:", err.message));
+            }
         }
 
         if (found) {

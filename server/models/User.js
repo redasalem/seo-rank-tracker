@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
     reportFrequency: { type: String, enum: ["weekly", "monthly", "off"], default: "off" },
     lastReportSentDate: { type: Date, default: null },
     language: { type: String, enum: ["en", "ar"], default: "en" },
+    lastLoginAt: { type: Date, default: Date.now },
 
 },{timestamps:true})
 

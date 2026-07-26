@@ -2,6 +2,8 @@ import cron from "node-cron";
 import KeywordTracking from "../models/keywordTracking.js";
 import { processAllPendingKeywords } from "../services/keywordTrackingService.js";
 import { sendDuePeriodicReports } from "../services/reportService.js";
+import { sendWeeklyEmails } from "./weeklyEmailJob.js";
+import { sendInactivityEmails } from "./inactivityJob.js";
 
 // ─── تحديث يومي لجميع الكلمات المفتاحية ──────────────────────────────────
 // يعمل كل يوم الساعة 3 الفجر (وقت قليل الضغط على السيرفر)
@@ -41,4 +43,24 @@ export function startCronJobs() {
     });
 
     console.log("🕐 Cron job scheduled: Periodic email reports at 8:00 AM");
+
+    // ─── إرسال الملخص الأسبوعي ──────────────────────────────────────────────
+    // يعمل كل يوم أحد الساعة 8 صباحاً بتوقيت الخادم (UTC)
+    cron.schedule("0 8 * * 0", async () => {
+        console.log("⏰ [CRON] Weekly summary emails started...");
+        await sendWeeklyEmails();
+        console.log("✅ [CRON] Weekly summary emails completed!");
+    });
+
+    console.log("🕐 Cron job scheduled: Weekly summary emails at 8:00 AM on Sundays");
+
+    // ─── فحص المستخدمين الخاملين ────────────────────────────────────────────
+    // يعمل كل يوم الساعة 10 صباحاً بتوقيت الخادم (UTC)
+    cron.schedule("0 10 * * *", async () => {
+        console.log("⏰ [CRON] Inactivity check started...");
+        await sendInactivityEmails();
+        console.log("✅ [CRON] Inactivity check completed!");
+    });
+
+    console.log("🕐 Cron job scheduled: Inactivity check at 10:00 AM daily");
 }
