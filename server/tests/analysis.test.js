@@ -11,7 +11,7 @@ describe('Analysis Endpoints (Plan Limits)', () => {
         const hashedPassword = await bcrypt.hash('Password123!', 10);
         const user = await User.create({
             name: 'Free User',
-            email: 'free@example.com',
+            email: 'free@valid-domain.com',
             password: hashedPassword,
             isEmailVerified: true,
             isVerified: true,
@@ -23,7 +23,7 @@ describe('Analysis Endpoints (Plan Limits)', () => {
         // Login to get token
         const res = await request(app)
             .post('/api/auth/login')
-            .send({ email: 'free@example.com', password: 'Password123!' });
+            .send({ email: 'free@valid-domain.com', password: 'Password123!' });
             
         // Extract token from cookie
         const cookies = res.headers['set-cookie'];

@@ -6,7 +6,7 @@ import RegistrationToken from '../models/RegistrationToken.js';
 describe('Auth Endpoints', () => {
     const testUser = {
         name: 'Test User',
-        email: 'test@example.com',
+        email: 'test@valid-domain.com',
         password: 'Password123!',
     };
 
@@ -193,14 +193,14 @@ describe('Auth Endpoints', () => {
             .post('/api/auth/register')
             .send({
                 name: 'Direct User',
-                email: 'directuser@example.com',
+                email: 'directuser@valid-domain.com',
                 password: 'Password123!'
             });
 
         expect(res.statusCode).toEqual(201);
         expect(res.body.success).toBe(true);
 
-        const createdUser = await User.findOne({ email: 'directuser@example.com' });
+        const createdUser = await User.findOne({ email: 'directuser@valid-domain.com' });
         expect(createdUser).toBeTruthy();
         expect(createdUser.name).toBe('Direct User');
     });
