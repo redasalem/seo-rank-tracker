@@ -15,6 +15,8 @@ import adminRouter from "./routes/adminRoutes.js";
 import healthRouter from "./routes/healthRoutes.js";
 import logger from "./utils/logger.js";
 import { startCronJobs } from "./jobs/scheduler.js";
+import subscriptionRouter from "./routes/subscriptionRoutes.js";
+import { stripeWebhook } from "./controllers/subscriptionControllers.js";
 
 if (process.env.NODE_ENV !== 'test') {
     await connectDB();
@@ -78,13 +80,8 @@ app.use("/api/auth/forgot-password", authLimiter);
 // Apply stricter rate limiting to scraping endpoints
 app.use("/api/analysis/start", scrapingLimiter);
 app.use("/api/rank/add", scrapingLimiter);
-app.use("/api/rank/:id/refresh", scrapingLimiter);
-
-// Apply rate limiting to AI Chat endpoint
-app.use("/api/analysis/:id/ai-chat", aiLimiter);
-
-import subscriptionRouter from "./routes/subscriptionRoutes.js";
-import { stripeWebhook } from "./controllers/subscriptionControllers.js";
+// Note: Dynamic path rate limiters (/:id/) are applied inside the router, not here.
+// app.use() does not parse route params like :id.
 
 // Stripe Webhook MUST be before express.json() to keep the raw body
 app.post("/api/subscription/webhook", express.raw({ type: "application/json" }), stripeWebhook);
